@@ -19,6 +19,12 @@ let use_annotation = ref false
 
 let solve_dual = ref ""
 
+let stop_if_tractable = ref false
+
+let remove_disjunctions_if_intractable = ref false
+
+let remove_disjunctions = ref false
+
 module Preprocess = struct
   let inlining = ref (Obj.magic())
 end
@@ -111,6 +117,12 @@ type params =
   
   ; stop_if_intractable : bool [@default false]
   
+  ; stop_if_tractable : bool [@default false]
+  
+  ; remove_disjunctions_if_intractable : bool [@default false]
+  
+  ; remove_disjunctions : bool [@default false]
+  
   ; z3_path : string [@default "z3"]
   (** path of z3 **)
   
@@ -144,6 +156,9 @@ let set_up_params params =
   set_ref pcsat_config                     params.pcsat_config;
   set_ref use_annotation                   params.use_annotation;
   set_ref solve_dual                       params.solve_dual;
+  set_ref stop_if_tractable                params.stop_if_tractable;
+  set_ref remove_disjunctions_if_intractable  params.remove_disjunctions_if_intractable;
+  set_ref remove_disjunctions              params.remove_disjunctions;
   params.input
 
 (******************************************************************************)

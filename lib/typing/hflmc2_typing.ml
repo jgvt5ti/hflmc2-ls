@@ -4,6 +4,7 @@ module Infer = Rinfer
 module Rhflz = Rhflz
 module Result = Rresult
 module Chc = Chc
+module Remove_disjunctions = Remove_disjunctions
 
 let rec generate_env = function 
   | [] -> Hflmc2_syntax.IdMap.empty
@@ -87,7 +88,13 @@ let generate_anno_env_ty (aty: Hflmc2_syntax.Type.abstraction_ty) (rty: Rtype.t)
       merge_rid_maps
         m1
         m2
-    | _ -> assert false
+    | _ ->
+      print_endline "ERROR: type mismatch (generate_anno_env_ty)";
+      print_string "aty: ";
+      print_endline @@ Type.show_abstraction_ty aty;
+      print_string "rty: ";
+      Rtype.print_rtype rty;
+      assert false
   and go_argty env aty rty = match aty, rty with
     | Type.TyInt, Rtype.RInt rint -> begin
       match rint with
@@ -115,7 +122,7 @@ let generate_anno_env (anno_env : Hflmc2_syntax.Type.abstraction_ty Hflmc2_synta
             acc
             (generate_anno_env_ty aty rty)
         | None ->
-          print_endline @@ "NOT FUOND: " ^ Id.to_string id ^ " (maybe inlined)";
+          print_endline @@ "NOT FOUND: " ^ Id.to_string id ^ " (maybe inlined)";
           acc
       )
       ~init:Rid.M.empty in

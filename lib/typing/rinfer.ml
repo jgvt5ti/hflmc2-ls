@@ -338,6 +338,10 @@ let rec infer anno_env hes env top =
       if sat then return Valid
       if unsat then returns check_feasibility
     *)
+    if not is_tractable then
+      (if !Hflmc2_options.stop_if_intractable || !Hflmc2_options.remove_disjunctions_if_intractable then raise ExnIntractable);
+    if is_tractable then
+      (if !Hflmc2_options.stop_if_tractable then raise ExnTractable);
     let solver = Chc_solver.selected_solver is_tractable in
     match call_solver_with_timer anno_env chcs solver with
     | `Unsat when !Hflmc2_options.Typing.no_disprove -> `Unknown
@@ -394,7 +398,6 @@ let rec infer anno_env hes env top =
         if min_size > 1 then begin
           (* if size > 1 /\ dual_size > 1 *)
           print_string "[Warning]Some definite clause has or-head\n";
-          if !Hflmc2_options.stop_if_intractable then raise ExnIntractable;
           use_dual, try_intersection_type anno_env target false
         end else begin
           (* if dual_size <= 1 *)
@@ -414,7 +417,6 @@ let rec infer anno_env hes env top =
           true, try_intersection_type anno_env simplified_dual true
         else begin
           print_string "[Warning]Some definite clause has or-head\n";
-          if !Hflmc2_options.stop_if_intractable then raise ExnIntractable;
           false, try_intersection_type anno_env simplified false
         end
       end else begin (* if size <= 1 *)
@@ -428,7 +430,6 @@ let rec infer anno_env hes env top =
       let anno_env = dual_environment anno_env in
       if size_dual > 1 then begin
         print_string "[Warning]Some definite clause has or-head\n";
-        if !Hflmc2_options.stop_if_intractable then raise ExnIntractable;
         true, try_intersection_type anno_env target false
       end else begin
         true, try_intersection_type anno_env target true
@@ -438,7 +439,6 @@ let rec infer anno_env hes env top =
       print_endline "non-dual";
       if size > 1 then begin
         print_string "[Warning]Some definite clause has or-head\n";
-        if !Hflmc2_options.stop_if_intractable then raise ExnIntractable;
         false, try_intersection_type anno_env simplified false
       end else begin
         false, try_intersection_type anno_env simplified true

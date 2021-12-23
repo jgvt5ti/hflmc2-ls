@@ -46,6 +46,23 @@ let report_times () =
         in Print.pr "%s %f sec@." s v
       end
 
+let remove_disjunctions psi top =
+  let (top, psi) = Typing.Remove_disjunctions.convert (Var top, psi) in
+  let psi = {
+    Hflz.var=
+      (let id = Id.gen_id () in
+      {Id.id = id; name = "X" ^ string_of_int id; ty=(Type.TyBool ())});
+    body=top;
+    fix=Fixpoint.Greatest
+  }::psi in
+  let psi = Syntax.Trans.Simplify.hflz_hes psi in
+  Syntax.Trans.Preprocess.main psi
+  |> (fun (psi, top) ->
+    match top with
+    | Some top -> (psi, top)
+    | None -> assert false
+  )
+
 let main file =
   Log.app begin fun m -> m ~header:"z3 path" "%s" !Hflmc2_options.z3_path end;
   let psi, anno_env = Syntax.parse_file file in
@@ -63,12 +80,28 @@ let main file =
   let psi, top = Syntax.Trans.Preprocess.main psi in
   match top with
   | Some(top) -> begin
-    match Typing.main anno_env psi top with
-    | `Sat ->  `Valid
-    | `Unsat ->  `Invalid
-    | `Unknown -> `Unknown
-    | _ -> `Fail
-    end
+    let psi, top =
+      if !Hflmc2_options.remove_disjunctions
+        then (remove_disjunctions psi top)
+        else (psi, top) in
+    try (
+      match Typing.main anno_env psi top with
+      | `Sat ->  `Valid
+      | `Unsat ->  `Invalid
+      | `Unknown -> `Unknown
+      | _ -> `Fail
+    ) with Typing.Infer.ExnIntractable -> (
+      if !Hflmc2_options.remove_disjunctions_if_intractable then (
+        Hflmc2_options.stop_if_tractable := false;
+        let psi, top = remove_disjunctions psi top in
+        match Typing.main anno_env psi top with
+        | `Sat ->  `Valid
+        | `Unsat ->  `Invalid
+        | `Unknown -> `Unknown
+        | _ -> `Fail
+      ) else raise Typing.Infer.ExnIntractable
+    )
+  end
   | None -> print_string "[Warn]input was empty\n";
       `Valid (* because the input is empty *)
-
+  
