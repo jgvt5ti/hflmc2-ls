@@ -126,8 +126,9 @@ type params =
   ; z3_path : string [@default "z3"]
   (** path of z3 **)
   
-  ; pcsat_config : string [@default "solver/pcsat_dt.json"]
+  ; pcsat_config : string [@default "solver/pcsat_tb.json"]
   (** path of config for pcsat **)
+  (* solver/pcsat_dt.json *)
   
   ; use_annotation : bool [@default false]
   (** use annotations in %ENV section to solve a formula *)
