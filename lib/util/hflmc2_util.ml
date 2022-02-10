@@ -16,9 +16,9 @@ let remove_generated_files () =
     ~f:(fun f ->
       try
         Stdlib.Sys.remove f
-        ; print_endline @@ "removed: " ^f 
+        (* ; print_endline @@ "removed: " ^f  *)
       with Sys_error _e -> ()
-        ; print_endline @@ "Error when removeing temporary files (" ^ _e ^ ")"
+        (* ; print_endline @@ "Error when removeing temporary files (" ^ _e ^ ")" *)
     )
     !generated_temp_files;
   generated_temp_files := []
