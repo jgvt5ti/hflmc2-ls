@@ -285,9 +285,7 @@ let parse_model model =
 
 let save_chc_to_smt2 env chcs solver = 
     let smt2 = chc2smt2 env chcs solver in
-    Random.self_init ();
-    let r = Random.int 0x10000000 in
-    let file = Printf.sprintf "/tmp/%s-%d.smt2" (name_of_solver solver) r in
+    let file = Hflmc2_util.gen_temp_filename ("/tmp/" ^ name_of_solver solver ^ "-") ".smt2" in
     let oc = open_out file in
     Printf.fprintf oc "%s" smt2;
     close_out oc;

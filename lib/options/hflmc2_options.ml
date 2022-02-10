@@ -25,6 +25,8 @@ let remove_disjunctions_if_intractable = ref false
 
 let remove_disjunctions = ref false
 
+let remove_temporary_files = ref false
+
 module Preprocess = struct
   let inlining = ref (Obj.magic())
 end
@@ -135,6 +137,10 @@ type params =
   
   ; solve_dual : string [@default "auto"]
   (** "auto" (default): automatically solve dual or non-dual chc, depends on the sizes of the dual and non-dual chc / "dual": solve dual chc / "non-dual": solve non-dual chc / "auto-conservative" : solve non-dual chc, unless the non-dual chc is extended chc and the dual chc is not *)
+  
+  ; remove_temporary_files : bool [@default false]
+  (** Remove temporary files in /tmp on exit  *)
+  ; 
   }
   [@@deriving cmdliner,show]
 
@@ -160,6 +166,7 @@ let set_up_params params =
   set_ref stop_if_tractable                params.stop_if_tractable;
   set_ref remove_disjunctions_if_intractable  params.remove_disjunctions_if_intractable;
   set_ref remove_disjunctions              params.remove_disjunctions;
+  set_ref remove_temporary_files           params.remove_temporary_files;
   params.input
 
 (******************************************************************************)

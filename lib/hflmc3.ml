@@ -64,8 +64,25 @@ let remove_disjunctions psi top =
     | Some top -> (psi, top)
     | None -> assert false
   )
+(* alrm hup int term usr1 usr2 *)
+let set_signals () =
+  let f =
+    Sys.Signal_handle
+      (fun code ->
+        print_endline @@ "signal code: " ^ string_of_int code;
+        Hflmc2_util.remove_generated_files ();
+        Sys.set_signal code Sys.Signal_default;
+        Unix.kill (Unix.getpid ()) code
+        ) in
+  Sys.set_signal Sys.sigalrm f;
+  Sys.set_signal Sys.sighup f;
+  Sys.set_signal Sys.sigint f;
+  Sys.set_signal Sys.sigterm f;
+  Sys.set_signal Sys.sigusr1 f;
+  Sys.set_signal Sys.sigusr2 f
 
 let main file =
+  if !Hflmc2_options.remove_temporary_files then set_signals ();
   Log.app begin fun m -> m ~header:"z3 path" "%s" !Hflmc2_options.z3_path end;
   let psi, anno_env = Syntax.parse_file file in
   let anno_env =
@@ -80,30 +97,34 @@ let main file =
     Print.(hflz_hes simple_ty_) psi
   end;
   let psi, top = Syntax.Trans.Preprocess.main psi in
-  match top with
-  | Some(top) -> begin
-    let psi, top =
-      if !Hflmc2_options.remove_disjunctions
-        then (remove_disjunctions psi top)
-        else (psi, top) in
-    try (
-      match Typing.main anno_env psi top with
-      | `Sat ->  `Valid
-      | `Unsat ->  `Invalid
-      | `Unknown -> `Unknown
-      | _ -> `Fail
-    ) with Typing.Infer.ExnIntractable -> (
-      if !Hflmc2_options.remove_disjunctions_if_intractable then (
-        Hflmc2_options.stop_if_tractable := false;
-        let psi, top = remove_disjunctions psi top in
+  let result =
+    match top with
+    | Some(top) -> begin
+      let psi, top =
+        if !Hflmc2_options.remove_disjunctions
+          then (remove_disjunctions psi top)
+          else (psi, top) in
+      try (
         match Typing.main anno_env psi top with
         | `Sat ->  `Valid
         | `Unsat ->  `Invalid
         | `Unknown -> `Unknown
         | _ -> `Fail
-      ) else raise Typing.Infer.ExnIntractable
-    )
-  end
-  | None -> print_string "[Warn]input was empty\n";
-      `Valid (* because the input is empty *)
+      ) with Typing.Infer.ExnIntractable -> (
+        if !Hflmc2_options.remove_disjunctions_if_intractable then (
+          Hflmc2_options.stop_if_tractable := false;
+          let psi, top = remove_disjunctions psi top in
+          match Typing.main anno_env psi top with
+          | `Sat ->  `Valid
+          | `Unsat ->  `Invalid
+          | `Unknown -> `Unknown
+          | _ -> `Fail
+        ) else raise Typing.Infer.ExnIntractable
+      )
+    end
+    | None -> print_string "[Warn]input was empty\n";
+        `Valid (* because the input is empty *)
+  in
+  if !Hflmc2_options.remove_temporary_files then Hflmc2_util.remove_generated_files ();
+  result
   

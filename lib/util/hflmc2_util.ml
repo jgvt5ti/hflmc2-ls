@@ -3,6 +3,26 @@ type process_status = Unix.process_status
 module Core = Core
 open Core
 
+let generated_temp_files : string list ref = ref []
+let () = Random.self_init ()
+let gen_temp_filename prefix suffix =
+  let random_string = Printf.sprintf "%d_%d" (Random.int 0x10000000) (Random.int 0x10000000) in
+  let filename = prefix ^ random_string ^ suffix in
+  generated_temp_files := filename :: !generated_temp_files;
+  filename
+
+let remove_generated_files () =
+  List.iter
+    ~f:(fun f ->
+      try
+        Stdlib.Sys.remove f
+        ; print_endline @@ "removed: " ^f 
+      with Sys_error _e -> ()
+        ; print_endline @@ "Error when removeing temporary files (" ^ _e ^ ")"
+    )
+    !generated_temp_files;
+  generated_temp_files := []
+
 module Pair = struct
   (* Bifunctor method *)
   let bimap  ~f (x, y) = (f x, f y)
@@ -218,6 +238,7 @@ module Fn = struct
     print_endline @@ "RUNNING COMMAND: \"" ^ String.concat ~sep:" " (Array.to_list cmd) ^ "\"";
     let f_out, fd_out = Unix.mkstemp "/tmp/run_command.stdout" in
     let f_err, fd_err = Unix.mkstemp "/tmp/run_command.stderr" in
+    generated_temp_files := f_out :: f_err :: !generated_temp_files;
     let process_status = Lwt_main.run @@
       Lwt_process.exec
         ~timeout

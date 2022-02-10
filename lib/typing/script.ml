@@ -5,11 +5,6 @@ let prepare_fptprove_script () =
     close_out oc;
     path
   in
-  let get_random_string () =
-    let r1 = Random.int 0x10000000 in
-    let r2 = Random.int 0x10000000 in
-    Printf.sprintf "%d_%d" r1 r2
-  in
   let sub_script = {|
     is_mac () {
       sw_vers > /dev/null 2>&1
@@ -76,15 +71,14 @@ let prepare_fptprove_script () =
             echo "${@:$#:1},abort,$elapsed,$iterations"
     fi
   |} in
-  let sub_script_path = "/tmp/fptprove_launch_script_para_aux_" ^ get_random_string () ^ ".sh" in
-  print_endline @@ "sub_script_path: " ^ sub_script_path;
+  let sub_script_path = Hflmc2_util.gen_temp_filename "/tmp/fptprove_launch_script_para_aux_" ".sh" in
+  let fptprove_output_path = Hflmc2_util.gen_temp_filename "/tmp/fptprove_output1" "" in
   ignore @@ save_string sub_script_path sub_script;
   let script = {|
     cd $2
     timeout=$3
     options='-p pcsp'
-    rand=$RANDOM
-    setsid /bin/bash -c "/bin/bash |} ^ sub_script_path ^ {| $timeout $2/_build/default/main.exe -c $2/config/$4 $options $1 > /tmp/fptprove_output1$rand" &
+    setsid /bin/bash -c "/bin/bash |} ^ sub_script_path ^ {| $timeout $2/_build/default/main.exe -c $2/config/$4 $options $1 > |} ^ fptprove_output_path ^ {|" &
     pgid1=$!
 
     trap "kill -TERM -$pgid1" EXIT
@@ -93,12 +87,11 @@ let prepare_fptprove_script () =
     do
         alive1=$(ps -ef | grep " $pgid1 " | grep -v grep | awk '{ print $2 }')
         if [ -z "$alive1" ]; then
-            cat /tmp/fptprove_output1$rand
+            cat |} ^ fptprove_output_path ^ {|
             break
         fi
         sleep 0.5
     done
   |} in
-  let script_path = save_string ("/tmp/fptprove_launch_script_" ^ get_random_string () ^ ".sh") script in
-  print_endline @@ "script_path: " ^ script_path;
+  let script_path = save_string (Hflmc2_util.gen_temp_filename "/tmp/fptprove_launch_script_" ".sh") script in
   script_path
