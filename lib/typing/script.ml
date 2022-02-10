@@ -5,6 +5,11 @@ let prepare_fptprove_script () =
     close_out oc;
     path
   in
+  let get_random_string () =
+    let r1 = Random.int 0x10000000 in
+    let r2 = Random.int 0x10000000 in
+    Printf.sprintf "%d_%d" r1 r2
+  in
   let sub_script = {|
     is_mac () {
       sw_vers > /dev/null 2>&1
@@ -71,7 +76,8 @@ let prepare_fptprove_script () =
             echo "${@:$#:1},abort,$elapsed,$iterations"
     fi
   |} in
-  let sub_script_path = "/tmp/fptprove_launch_script_para_aux.sh" in
+  let sub_script_path = "/tmp/fptprove_launch_script_para_aux_" ^ get_random_string () ^ ".sh" in
+  print_endline @@ "sub_script_path: " ^ sub_script_path;
   ignore @@ save_string sub_script_path sub_script;
   let script = {|
     cd $2
@@ -93,4 +99,6 @@ let prepare_fptprove_script () =
         sleep 0.5
     done
   |} in
-  save_string "/tmp/fptprove_launch_script.sh" script
+  let script_path = save_string ("/tmp/fptprove_launch_script_" ^ get_random_string () ^ ".sh") script in
+  print_endline @@ "script_path: " ^ script_path;
+  script_path
