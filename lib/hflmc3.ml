@@ -18,6 +18,8 @@ let show_result = function
   | `Unknown    -> "Unknown"
   | `Fail       -> "Fail"
 
+let show_tractability = Typing.Infer.show_tractability
+
 let measure_time f =
   let start  = Unix.gettimeofday () in
   let result = f () in

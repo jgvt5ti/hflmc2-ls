@@ -3,6 +3,13 @@ open Rtype
 open Hflmc2_syntax
 open Chc
 
+type tractability = T_Tractable | T_Intractable
+let tractability = ref T_Tractable
+let show_tractability () =
+  match !tractability with
+  | T_Tractable -> "tractable"
+  | T_Intractable -> "intractable"
+
 (* timer*)
 let measure_time f =
   let start  = Unix.gettimeofday () in
@@ -338,10 +345,14 @@ let rec infer anno_env hes env top =
       if sat then return Valid
       if unsat then returns check_feasibility
     *)
-    if not is_tractable then
+    if not is_tractable then (
       (if !Hflmc2_options.stop_if_intractable || !Hflmc2_options.remove_disjunctions_if_intractable then raise ExnIntractable);
-    if is_tractable then
+      tractability := T_Intractable
+    );
+    if is_tractable then (
       (if !Hflmc2_options.stop_if_tractable then raise ExnTractable);
+      tractability := T_Tractable
+    );
     let solver = Chc_solver.selected_solver is_tractable in
     match call_solver_with_timer anno_env chcs solver with
     | `Unsat when !Hflmc2_options.Typing.no_disprove -> `Unknown

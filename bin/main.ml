@@ -16,8 +16,9 @@ let () =
     begin match Hflmc3.main file with
     | r ->
         Fmt.pr "@[<v 2>Verification Result:@,%s@]@." @@ Hflmc3.show_result r;
-        if Logs.Src.level Hflmc3.log_src <> None
-          then Hflmc3.report_times()
+        (if Logs.Src.level Hflmc3.log_src <> None
+          then Hflmc3.report_times());
+        print_endline @@ "Tractability: " ^ Hflmc3.show_tractability ()
     | exception
         ( Hflmc3.Util.Fn.Fatal e
         | Hflmc3.Syntax.ParseError e
