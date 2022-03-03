@@ -33,6 +33,7 @@ let selected_solver is_tractable =
     else if sv = "hoice" then `Hoice
     else if sv = "fptprove" then `Fptprove
     else if sv = "liu" || sv = "hoice-haskell" || sv = "hoice-ex" then `Liu
+    else if sv = "eldarica" || sv = "eld" then `Eldarica
     else failwith ("Unknown solver: " ^ sv)
   in
   if not is_tractable && solver != `Fptprove && solver != `Liu then
@@ -84,6 +85,7 @@ let selected_cmd timeout = function
   | `Spacer -> call_template [|!Hflmc2_options.z3_path; "fp.engine=spacer"|] timeout
   | `Hoice -> call_template [|"hoice"; "--z3"; !Hflmc2_options.z3_path|] timeout
   | `Fptprove -> call_fptprove timeout  
+  | `Eldarica -> call_template [|"eld"|] timeout
   | `Liu -> call_liu_solver timeout
   | _ -> failwith "you cannot use this"
   
@@ -323,7 +325,7 @@ let check_sat ?(timeout=100000.0) env chcs solver =
           | _ -> loop xs
         end
     in loop tries
-  | `Spacer | `Hoice | `Fptprove | `Liu as sv -> check_sat_inner timeout sv
+  | `Eldarica | `Spacer | `Hoice | `Fptprove | `Liu as sv -> check_sat_inner timeout sv
 
 (* usp: unsat proof *)
 let rec unsat_proof_of_eldarica_cex nodes = 
