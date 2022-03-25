@@ -108,6 +108,7 @@ type params =
   (** Show refinement types. This sometimes fails because of parsing the solution from CHC solver... *)
 
   ; dont_show_refinement : bool [@default false] [@docs "Typing"] [@docv "don't show refinement"]
+  (** Do not show refinement types (override the --show-refinement option)  *)
   
   ; mode_burn_et_al: bool [@default false] [@docs "Typing"] [@docv "Use the subtyping rule of burn et al"]
   (** Use Subtying rule in burn et al *)
@@ -129,8 +130,7 @@ type params =
   (** path of z3 **)
   
   ; pcsat_config : string [@default "solver/pcsat_tb.json"]
-  (** path of config for pcsat **)
-  (* solver/pcsat_dt.json *)
+  (** path of config for pcsat. e.g., solver/pcsat_dt.json **)
   
   ; use_annotation : bool [@default false]
   (** use annotations in %ENV section to solve a formula *)
