@@ -30,8 +30,8 @@ rule token = parse
 | "]"                      { RSQUARE   }
 | "[]"                     { NIL       }
 | "::"                     { CONS      }
-| "isNil"                  { ISNIL     }
-| "isCons"                 { ISCONS    }
+| "=l"                     { EQL       }
+| "<>l"                    { NEQL      }
 | "true"                   { TRUE      }
 | "false"                  { FALSE     }
 | ("\\"|"λ")               { LAMBDA    }
