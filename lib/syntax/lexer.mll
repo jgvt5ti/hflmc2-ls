@@ -28,6 +28,10 @@ rule token = parse
 | ")"                      { RPAREN    }
 | "["                      { LSQUARE   }
 | "]"                      { RSQUARE   }
+| "[]"                     { NIL       }
+| "::"                     { CONS      }
+| "isNil"                  { ISNIL     }
+| "isCons"                 { ISCONS    }
 | "true"                   { TRUE      }
 | "false"                  { FALSE     }
 | ("\\"|"λ")               { LAMBDA    }
