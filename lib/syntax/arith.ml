@@ -18,11 +18,23 @@ type 'var gen_t =
 type t = [`Int] Id.t gen_t
   [@@deriving eq,ord,show,iter,map,fold,sexp]
 
+type ('avar, 'lvar) gen_lt =
+  | Nil
+  | Cons of 'avar gen_t * ('avar, 'lvar) gen_lt
+  | LVar of 'lvar
+  [@@deriving eq,ord,show,iter,map,fold,sexp]
+type lt = ([`Int] Id.t, [`List] Id.t) gen_lt
+  [@@deriving eq,ord,show,iter,map,fold,sexp]
+
 let mk_int n     = Int(n)
+let mk_nil       = Nil
+let mk_cons hd tl  = Cons(hd,tl)
 let mk_op op as' = Op(op,as')
 let mk_var' v    = Var v
 (* specific to [t] *)
 let mk_var v : t = Var({v with ty = `Int})
+
+let mk_lvar v : lt = LVar({v with ty = `List})
 
 let rec fvs : 'var gen_t -> 'var list = function
   | Int _ -> []

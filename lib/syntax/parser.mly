@@ -137,9 +137,9 @@ arith:
 
 ls_arith:
 | "[]"                { Arith.mk_nil                        }
-| arith "::" ls_arith { Arith.mk_cons $1 $2                 }
+| arith "::" ls_arith { Arith.mk_cons $1 $3                 }
 | lvar                { let x = Id.{ name=$1; ty=`List; id=(-1) } in
-                        Arith.mk_var' x
+                        Arith.mk_lvar x
                       }
 
 atom_arith:
