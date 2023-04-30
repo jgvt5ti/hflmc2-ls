@@ -73,19 +73,22 @@ and_or_expr:
 | pred_expr                     { $1 }
 
 pred_expr:
-| arith_expr                 { $1               }
-| arith_expr pred arith_expr { mk_pred $2 $1 $3 }
+| arith_expr                          { $1                 }
+| arith_expr ls_pred arith_expr       { mk_lspred $2 $1 $3 }
+| arith_expr pred arith_expr          { mk_pred $2 $1 $3   }
 
 arith_expr:
-| app_expr                 { $1                }
-| arith_expr op arith_expr { mk_op $2  [$1;$3] }
-| "-" arith_expr %prec NEG { mk_op Arith.Sub [mk_int 0;$2] }
+| app_expr                   { $1                }
+| arith_expr op arith_expr   { mk_op $2  [$1;$3] }
+| arith_expr "::" arith_expr { mk_cons $1 $3     }
+| "-" arith_expr %prec NEG   { mk_op Arith.Sub [mk_int 0;$2] }
 
 app_expr:
 | atom atom* { mk_apps $1 $2 }
 
 atom:
 | INT  { mk_int   $1 }
+| NIL  { mk_nil      }
 | bool { mk_bool  $1 }
 | lvar { mk_var   $1 }
 | uvar { mk_var   $1 }

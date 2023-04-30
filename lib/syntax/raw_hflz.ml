@@ -7,8 +7,11 @@ type raw_hflz =
   | Abs  of string * raw_hflz
   | App  of raw_hflz * raw_hflz
   | Int  of int
+  | Nil
+  | Cons of raw_hflz * raw_hflz
   | Op   of Arith.op * raw_hflz list
   | Pred of Formula.pred * raw_hflz list
+  | LsPred of Formula.ls_pred * raw_hflz list
   | Forall of string * raw_hflz
   [@@deriving eq,ord,show,iter,map,fold,sexp]
 type hes_rule =
@@ -22,6 +25,8 @@ type hes = hes_rule list
   [@@deriving eq,ord,show,iter,map,fold,sexp]
 
 let mk_int n     = Int(n)
+let mk_nil = Nil
+let mk_cons hd tl = Cons (hd, tl)
 let mk_bool b    = Bool b
 let mk_var x     = Var x
 let mk_op op as' = Op(op,as')
@@ -36,7 +41,7 @@ let mk_ors = function
   | x::xs -> List.fold_left xs ~init:x ~f:(fun a b -> Or(a,b))
 
 let mk_pred pred a1 a2 = Pred(pred, [a1;a2])
-
+let mk_lspred pred a1 a2 = LsPred(pred, [a1;a2])
 let mk_app t1 t2 = App(t1,t2)
 let mk_apps t ts = List.fold_left ts ~init:t ~f:mk_app
 
@@ -65,6 +70,7 @@ module Typing = struct
   type tyvar = (* simple_ty + simple_argty + type variable *)
     | TvRef of int * tyvar option ref
     | TvInt
+    | TvList
     | TvBool
     | TvArrow of tyvar * tyvar
     [@@deriving show { with_path = false }]
@@ -78,6 +84,7 @@ module Typing = struct
     fun ppf tv -> match tv with
       | TvInt -> Fmt.string ppf "int"
       | TvBool -> Fmt.string ppf "o"
+      | TvList -> Fmt.string ppf "list"
       | TvRef(id,{contents=None }) ->
           Fmt.pf ppf "tv%d" id
       | TvRef(id,{contents=Some tv}) ->
@@ -90,7 +97,7 @@ module Typing = struct
   exception Alias
   let rec occur : top:bool -> tyvar option ref -> tyvar -> bool =
     fun ~top r tv -> match tv with
-      | TvInt | TvBool -> false
+      | TvInt | TvBool | TvList -> false
       | TvArrow(tv1, tv2) -> occur ~top:false r tv1 || occur ~top:false r tv2
       | TvRef(_, ({contents=None} as r')) ->
           if r == r' && top then raise Alias else r == r'
@@ -111,7 +118,7 @@ module Typing = struct
 
   let rec write : tyvar option ref -> tyvar -> unit =
     fun r tv -> match tv with
-      | TvInt | TvBool | TvArrow _ -> r := Some tv
+      | TvInt | TvBool | TvList | TvArrow _ -> r := Some tv
       | TvRef (_, r') ->
           begin match !r' with
           | None -> r := Some tv
@@ -128,6 +135,7 @@ module Typing = struct
       match tv1, tv2 with
       | TvInt, TvInt -> ()
       | TvBool, TvBool -> ()
+      | TvList, TvList -> ()
       | TvArrow(tv11,tv12),  TvArrow(tv21,tv22) ->
           unify tv11 tv21; unify tv12 tv22
       | TvRef (_,r1), TvRef (_,r2) when r1 == r2 ->
@@ -282,7 +290,7 @@ module Typing = struct
             let psi1 = self#term id_env psi1 (TvArrow(tv_arg, tv)) in
             let psi2 = self#term id_env psi2 tv_arg in
             App (psi1, psi2)
-            
+        | _ -> Bool true
 
     method hes_rule : id_env -> hes_rule -> unit Hflz.hes_rule =
       fun id_env rule ->

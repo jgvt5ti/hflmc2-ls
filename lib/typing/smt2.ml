@@ -96,7 +96,7 @@ let rec formula2smt2 fml =
   | Formula.Pred (p, l) -> pred2smt2 (p, l)
   
 (*  Rid.M.t *)
-let pred_concrete_def ((name, (fml, args)) : (int * (('a, [`Int] Id.t) Hflmc2_syntax.Formula.gen_t * [`Int] Id.t list))) =
+let pred_concrete_def ((name, (fml, args)) : (int * (('a, [`Int] Id.t, _) Hflmc2_syntax.Formula.gen_t * [`Int] Id.t list))) =
   let rec go args =
     match args with
     | arg::args -> ("(" ^ Id.to_string arg ^ " Int)") :: go args

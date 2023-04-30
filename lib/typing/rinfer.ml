@@ -236,7 +236,7 @@ let formula_to_refinement fml =
   in
   go fml
   
-let print_derived_refinement_type is_dual_chc (anno_env : (('a, [ `Int ] Id.t) Formula.gen_t * [ `Int ] Id.t list) Rid.M.t) hes constraints = 
+let print_derived_refinement_type is_dual_chc (anno_env : (('a, [ `Int ] Id.t, _) Formula.gen_t * [ `Int ] Id.t list) Rid.M.t) hes constraints = 
   let rec gen_name_type_map constraints m = match constraints with
     | [] -> m
     | (id, args, body)::xs -> 
