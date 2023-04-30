@@ -41,6 +41,13 @@ let rec fvs : 'var gen_t -> 'var list = function
   | Var v -> [v]
   | Op (_, as') -> List.concat_map as' ~f:fvs
 
+let rec lfvs : ('avar, 'lvar) gen_lt -> 'avar list * 'lvar list = function
+  | Nil -> [], []
+  | Cons (hd, tl) -> 
+    let (avss, lvss) = lfvs tl in
+    List.append (fvs hd) avss, lvss
+  | LVar v -> [], [v]
+
 let lift f x y = match (x, y) with
   | Some(x), Some(y) -> Some(f x y)
   | _ -> None
