@@ -41,11 +41,11 @@ module Subst = struct
              -> abstraction_ty =
       fun env ty -> match ty with
         | TyBool fs -> TyBool (List.map fs ~f:(formula env))
-        | TyArrow({ty=TyInt;_} as x, ty) ->
-            TyArrow(x, abstraction_ty (IdMap.remove env x) ty)
         | TyArrow({ty=TySigma ty_arg;_} as y, ret_ty) ->
             TyArrow({y with ty = TySigma (abstraction_ty env ty_arg)},
                     abstraction_ty env ret_ty)
+        | TyArrow(x, ty) ->
+            TyArrow(x, abstraction_ty (IdMap.remove env x) ty)
   end
 
   (* TODO IdMapを使う *)
@@ -99,6 +99,7 @@ module Subst = struct
       fun x a arg ->
         match arg with
         | TyInt -> TyInt
+        | TyList -> TyList
         | TySigma(sigma) -> TySigma(abstraction_ty x a sigma)
     let abstraction_ty
           : 'a S.Id.t
@@ -126,7 +127,16 @@ module Subst = struct
             | _ -> assert false
             end
         | Op(op, as') -> Op(op, List.map ~f:(arith env) as')
-    
+    let rec ls_arith : 'ty S.Hflz.t env -> S.Arith.lt -> S.Arith.lt =
+      fun env a -> match a with
+        | Nil -> a
+        | LVar x ->
+            begin match IdMap.find env x with
+            | None -> a
+            | Some (LsArith a') -> a'
+            | _ -> assert false
+            end
+        | Cons(hd, tl) -> Cons(arith env hd, ls_arith env tl)
     let rec rename_bindings (phi : 'ty S.Hflz.t): 'ty S.Hflz.t =
       let rec go rename (phi : 'ty S.Hflz.t): 'ty S.Hflz.t = match phi with
         | Var x -> begin
@@ -135,7 +145,7 @@ module Subst = struct
             let ty =
               (match v.S.Id.ty with
               | TySigma ty -> ty
-              | TyInt -> assert false) in
+              | _ -> assert false) in
             Var {v with ty}
           end
           | None -> Var x
@@ -160,7 +170,17 @@ module Subst = struct
               ~f:(fun a ->
                 match a.S.Id.ty with
                 | TyInt -> Some (S.Hflz.Arith (S.Arith.Var ({a with ty=`Int})))
-                | TySigma _ -> None
+                |  _ -> None
+              ) in
+          hflz rename phi
+        | LsArith _ | LsPred _ ->
+          let rename =
+            IdMap.filter_map
+              rename
+              ~f:(fun a ->
+                match a.S.Id.ty with
+                | TyList -> Some (S.Hflz.LsArith (S.Arith.LVar ({a with ty=`List})))
+                | _ -> None
               ) in
           hflz rename phi in
       go IdMap.empty phi
@@ -184,8 +204,12 @@ module Subst = struct
             Forall(x, hflz_ (IdMap.remove s_env x) (IdSet.add b_env x) t)
           | Arith a        ->
             Arith (arith s_env a)
+          | LsArith a        ->
+            LsArith (ls_arith s_env a)
           | Pred (p,as')   ->
             Pred(p, List.map ~f:(arith s_env) as')
+          | LsPred (p,as')   ->
+            LsPred(p, List.map ~f:(ls_arith s_env) as')
           | Bool _         -> phi
         in
         hflz_ env_ IdSet.empty phi

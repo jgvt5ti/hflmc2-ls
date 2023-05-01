@@ -240,7 +240,7 @@ module Typing = struct
               | Some id, _ | _, Some id  -> (* the order of match matters! *)
                   Id.{ name; id; ty=`List }
             in
-            self#add_ty_env x TvInt; Arith.mk_lvar x
+            self#add_ty_env x TvList; Arith.mk_lvar x
         | _ -> failwith "annot.ls_arith"
 
     method term : id_env -> raw_hflz -> tyvar -> unit Hflz.t =
@@ -285,6 +285,9 @@ module Typing = struct
         | Pred (pred,as') ->
             unify tv TvBool;
             Pred(pred, List.map ~f:(self#arith id_env) as')
+        | LsPred (pred,as') ->
+            unify tv TvBool;
+            LsPred(pred, List.map ~f:(self#ls_arith id_env) as')
         | Int _ | Op _ ->
             unify tv TvInt;
             Arith (self#arith id_env psi)
@@ -315,7 +318,6 @@ module Typing = struct
             let psi1 = self#term id_env psi1 (TvArrow(tv_arg, tv)) in
             let psi2 = self#term id_env psi2 tv_arg in
             App (psi1, psi2)
-        | _ -> Bool true
 
     method hes_rule : id_env -> hes_rule -> unit Hflz.hes_rule =
       fun id_env rule ->
