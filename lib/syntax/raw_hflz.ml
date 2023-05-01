@@ -408,6 +408,7 @@ module Typing = struct
           begin match self#id x with
           | x -> Var x
           | exception IntType -> Arith (Arith.mk_var x)
+          | exception ListType -> LsArith (Arith.mk_lvar x)
           end
       | Bool b           -> Bool b
       | Or  (psi1,psi2)  -> Or  (self#term psi1, self#term psi2)
@@ -506,10 +507,10 @@ let rename_ty_body : simple_ty Hflz.hes -> simple_ty Hflz.hes =
         | LsPred (pred, as') -> LsPred (pred, as')
         | Abs ({ty=TySigma ty;_} as x, psi) ->
             Abs(x, term (IdMap.add env x ty) psi)
-        | Abs ({ty=TyInt;_} as x, psi) -> Abs(x, term env psi)
+        | Abs (x, psi) -> Abs(x, term env psi)
         | Forall ({ty=TySigma ty;_} as x, psi) ->
             Forall (x, term (IdMap.add env x ty) psi)
-        | Forall ({ty=TyInt;_} as x, psi) -> Forall (x, term env psi)
+        | Forall (x, psi) -> Forall (x, term env psi)
     in
     let rule : simple_ty IdMap.t
             -> simple_ty Hflz.hes_rule
