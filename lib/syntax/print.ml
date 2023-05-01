@@ -170,11 +170,13 @@ let formula : Formula.t Fmt.t =
 let argty_ : (Prec.t -> 'ty Fmt.t) -> Prec.t -> 'ty Type.arg Fmt.t =
   fun format_ty_ prec ppf arg -> match arg with
     | TyInt -> Fmt.string ppf "int"
+    | TyList -> Fmt.string ppf "list"
     | TySigma sigma -> format_ty_ prec ppf sigma
 
 let argty : 'ty Fmt.t -> 'ty Type.arg Fmt.t =
   fun format_ty ppf arg -> match arg with
     | TyInt -> Fmt.string ppf "int"
+    | TyList -> Fmt.string ppf "list"
     | TySigma sigma -> format_ty ppf sigma
 
 let rec ty_ : ?with_var:bool -> 'annot Fmt.t -> Prec.t -> 'annot Type.ty Fmt.t =
@@ -310,6 +312,7 @@ let rec hflz_ : (Prec.t -> 'ty Fmt.t) -> Prec.t -> 'ty Hflz.t Fmt.t =
     | Pred (pred, as') ->
         show_paren (prec > Prec.eq) ppf "%a"
           formula (Formula.Pred(pred, as'))
+    | _ -> Fmt.string ppf "ls" (* TODO:print list values/predicates *)
 let hflz : (Prec.t -> 'ty Fmt.t) -> 'ty Hflz.t Fmt.t =
   fun format_ty_ -> hflz_ format_ty_ Prec.zero
 
