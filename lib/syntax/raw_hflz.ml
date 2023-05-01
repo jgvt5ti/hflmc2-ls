@@ -187,9 +187,11 @@ module Typing = struct
   class add_annot = object (self)
     (* for compatibility with Suzuki's implementation *)
     val mutable unbound_ints : id_env = StrMap.empty
+    val mutable unbound_lists : id_env = StrMap.empty
     val mutable ty_env : ty_env = IntMap.empty
 
     method get_unbound_ints : id_env = unbound_ints
+    method get_unbound_lists : id_env = unbound_lists
     method get_ty_env : ty_env = ty_env
 
     method add_ty_env : 'a. 'a Id.t -> tyvar -> unit =
@@ -220,6 +222,26 @@ module Typing = struct
             self#add_ty_env x TvInt; Arith.mk_var x
         | Op (op, as') -> Op (op, List.map ~f:(self#arith id_env) as')
         | _ -> failwith "annot.arith"
+
+    method ls_arith : id_env -> raw_hflz -> Arith.lt =
+      fun id_env ls -> match ls with
+        | Nil -> Arith.mk_nil
+        | Cons (hd, tl) -> Arith.mk_cons (self#arith id_env hd) (self#ls_arith id_env tl)
+        | Var name ->
+            let x =
+              match
+                StrMap.find id_env name,
+                StrMap.find unbound_lists name
+              with
+              | None, None ->
+                  let id = Id.gen_id() in
+                  unbound_lists <- StrMap.add_exn unbound_lists ~key:name ~data:id;
+                  Id.{ name; id; ty=`List }
+              | Some id, _ | _, Some id  -> (* the order of match matters! *)
+                  Id.{ name; id; ty=`List }
+            in
+            self#add_ty_env x TvInt; Arith.mk_lvar x
+        | _ -> failwith "annot.ls_arith"
 
     method term : id_env -> raw_hflz -> tyvar -> unit Hflz.t =
       fun id_env psi tv ->
@@ -266,6 +288,9 @@ module Typing = struct
         | Int _ | Op _ ->
             unify tv TvInt;
             Arith (self#arith id_env psi)
+        | Nil | Cons _ ->
+            unify tv TvList;
+            LsArith (self#ls_arith id_env psi)
         | Abs(name, psi) ->
             let id = new_id() in
             let x = Id.{ name; id; ty = () } in
@@ -345,12 +370,14 @@ module Typing = struct
   end
 
   exception IntType
+  exception ListType
 
   class deref ty_env = object (self)
     val ty_env : ty_env = ty_env
 
     method arg_ty : string -> tyvar -> simple_ty arg = fun info -> function
       | TvInt  -> TyInt
+      | TvList -> TyList
       | TvBool -> TySigma (TyBool())
       | TvRef (_, {contents=None}) as tv ->
           Log.debug begin fun _ ->
@@ -364,6 +391,7 @@ module Typing = struct
     method ty : string -> tyvar -> simple_ty =
       fun info tv -> match self#arg_ty info tv with
       | TyInt -> raise IntType
+      | TyList -> raise ListType
       | TySigma ty -> ty
 
     method id : unit Id.t -> simple_ty Id.t =
@@ -388,7 +416,9 @@ module Typing = struct
       | Abs (x, psi)     -> Abs (self#arg_id x, self#term psi)
       | Forall(x, psi)   -> Forall (self#arg_id x, self#term psi)
       | Arith a          -> Arith a
+      | LsArith a        -> LsArith a
       | Pred (pred,as')  -> Pred(pred, as')
+      | LsPred (pred,as')-> LsPred(pred, as')
 
     method hes_rule : unit Hflz.hes_rule -> simple_ty Hflz.hes_rule =
       fun rule ->
@@ -471,7 +501,9 @@ let rename_ty_body : simple_ty Hflz.hes -> simple_ty Hflz.hes =
         | And (psi1, psi2) -> And (term env psi1, term env psi2)
         | App (psi1, psi2) -> App (term env psi1, term env psi2)
         | Arith a          -> Arith a
+        | LsArith a          -> LsArith a
         | Pred (pred, as') -> Pred (pred, as')
+        | LsPred (pred, as') -> LsPred (pred, as')
         | Abs ({ty=TySigma ty;_} as x, psi) ->
             Abs(x, term (IdMap.add env x ty) psi)
         | Abs ({ty=TyInt;_} as x, psi) -> Abs(x, term env psi)

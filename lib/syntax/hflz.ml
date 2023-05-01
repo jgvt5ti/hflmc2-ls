@@ -12,7 +12,9 @@ type 'ty t =
   | App    of 'ty t * 'ty t
   (* constructers only for hflz *)
   | Arith  of Arith.t
+  | LsArith of Arith.lt
   | Pred   of Formula.pred * Arith.t list
+  | LsPred of Formula.ls_pred * Arith.lt list
   [@@deriving eq,ord,show,iter,map,fold,sexp]
 
 type 'ty hes_rule =
