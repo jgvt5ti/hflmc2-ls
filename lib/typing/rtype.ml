@@ -19,17 +19,22 @@ let generate_top_template args  =
 type rint =
   | RId of [`Int] Id.t
   | RArith of Arith.t
+type rlist =
+  | RLId of [`List] Id.t
+  | RLsArith of Arith.lt
 and t 
   = RBool of refinement
   | RArrow of t * t
   | RInt of rint
+  | RList of rlist
 and refinement
   = RTrue
    | RFalse
    | RPred of Formula.pred * Arith.t list
+   | RLsPred of Formula.ls_pred * Arith.lt list
    | RAnd of refinement * refinement
    | ROr of refinement * refinement
-  | RExists of [`Int] Id.t * refinement
+  | RExists of [`Int | `List] Id.t * refinement
    | RTemplate of template
 and template = id * Arith.t list (* template prdicate name and its args *)
 
@@ -94,6 +99,7 @@ let rec pp_refinement prec ppf = function
       Print.id x
       (pp_refinement Print.Prec.abs) f
   | RTemplate t -> pp_template ppf t
+  | _ -> () (* todo: pp list *)
 
 let rec pp_rtype prec ppf = function
   | RBool r -> begin
@@ -109,6 +115,7 @@ let rec pp_rtype prec ppf = function
   | RInt x ->
     Fmt.pf ppf "@[%a:int@]"
       pp_rint x
+  | _ -> () (* todo: pp list *)
 
 let print_rtype x =
   pp_rtype (Print.Prec.zero) Fmt.stdout x;
@@ -153,6 +160,7 @@ let rec subst id rint = function
   | RBool r -> RBool(subst_refinement id rint r)
   | RArrow(x, y) -> RArrow(subst id rint x, subst id rint y)
   | RInt x -> RInt x
+  | RList x -> RList x
 
 (* tuple of ids of substitution *)
 let rec subst_refinement_with_ids body l = match l with
@@ -181,6 +189,7 @@ let rec negate_ref = function
   | RTrue -> RFalse
   | RFalse -> RTrue
   | RPred(p, l) -> RPred(Formula.negate_pred p, l)
+  | RLsPred(p, l) -> RLsPred(Formula.negate_ls_pred p, l)
 
 let rec dual = function
   | RTemplate x -> RTemplate x
@@ -189,6 +198,7 @@ let rec dual = function
   | RTrue -> RFalse
   | RFalse -> RTrue
   | RPred(p, l) -> RPred(Formula.negate_pred p, l)
+  | RLsPred(p, l) -> RLsPred(Formula.negate_ls_pred p, l)
 
 (* This is an adhoc optimization of formulas. The reason why this function is required is
 that consider following program and its safety property problem.
@@ -238,11 +248,12 @@ let rec to_bottom = function
   | RArrow(x, y) -> RArrow(to_top x, to_bottom y)
   | RBool _ -> RBool RFalse
   | RInt(x) -> RInt(x)
+  | RList(x) -> RList(x)
 and to_top = function
   | RArrow(x, y) -> RArrow(to_bottom x, to_top y)
   | RBool _ -> RBool RTrue
   | RInt(x) -> RInt(x)
-
+  | RList(x) -> RList(x)
 let rec get_top = function
   | RBool(RTemplate(x)) -> x
   | RArrow(_, s) -> get_top s
