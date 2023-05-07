@@ -2,20 +2,6 @@ open Hflmc2_syntax
 open Rid
 open Rresult
 
-
-
-let id_source = ref 0
-let id_top = 0
-let created = ref false
-let generate_id () = id_source := !id_source + 1; !id_source
-let generate_template args = (generate_id (), List.map (fun x -> Arith.Var(x)) args)
-let generate_top_template args  = 
-  if !created then
-    failwith "You attempted to create top template twice"
-  else
-    created := true;
-    (id_top, args)
-
 type rint =
   | RId of [`Int] Id.t
   | RArith of Arith.t
@@ -34,13 +20,40 @@ and refinement
    | RLsPred of Formula.ls_pred * Arith.lt list
    | RAnd of refinement * refinement
    | ROr of refinement * refinement
-  | RExists of [`Int | `List] Id.t * refinement
+   | RExists of [`Int | `List] Id.t * refinement
    | RTemplate of template
-and template = id * Arith.t list (* template prdicate name and its args *)
+and template = id * Arith.t list * Arith.lt list (* template prdicate name and its args *)
 
-let generate_rtemplate args = RTemplate(generate_id(), args)
+let id_source = ref 0
+let id_top = 0
+let created = ref false
+let generate_id () = id_source := !id_source + 1; !id_source
 
-(* clone *)
+
+let rec generate_template_vars = function
+  | [] -> ([], [])
+  | {Id.ty = `Int;_} as id :: tl -> 
+    let (avars, lvars) = generate_template_vars tl in
+    let avar = Arith.Var(id) in
+    (avar :: avars, lvars)
+  | {Id.ty = `List;_} as id :: tl ->
+    let (avars, lvars) = generate_template_vars tl in
+    let lvar = Arith.LVar(id) in
+    (avars, lvar :: lvars)
+
+let generate_template args = 
+  let (avars, lvars) = generate_template_vars args in 
+  (generate_id(), avars, lvars)
+let generate_top_template args  = 
+  if !created then
+    failwith "You attempted to create top template twice"
+  else
+    created := true;
+    (id_top, args)
+
+(* let generate_rtemplate args = RTemplate(generate_id(), args) *)
+
+(* clone
 let rec clone_type_with_new_pred ints = function
   | RBool(RTemplate(_, _)) -> RBool(RTemplate(generate_id (), ints))
   | RArrow(RInt(RId(id)), y) ->
@@ -48,6 +61,7 @@ let rec clone_type_with_new_pred ints = function
   | RArrow(x, y) -> 
     RArrow(clone_type_with_new_pred ints x, clone_type_with_new_pred ints y)
   | x -> x
+*)
 
 let pp_comma : unit Fmt.t = fun ppf () -> Fmt.string ppf ","
 
@@ -56,8 +70,8 @@ let pp_template ppf (id, l) =
     id
     (Fmt.list ~sep:pp_comma Print.arith) l
 
-let print_template x =
-  pp_template Fmt.stdout x;
+let print_template : template -> unit = fun (id, x, _) ->
+  pp_template Fmt.stdout (id, x);
   Fmt.flush Fmt.stdout ()
 
 let pp_rint ppf = function
@@ -98,7 +112,7 @@ let rec pp_refinement prec ppf = function
     Print.show_paren (prec > Print.Prec.abs) ppf "@[<1>∃%a.@,%a@]"
       Print.id x
       (pp_refinement Print.Prec.abs) f
-  | RTemplate t -> pp_template ppf t
+  | RTemplate t -> () (*pp_template ppf t *)
   | _ -> () (* todo: pp list *)
 
 let rec pp_rtype prec ppf = function
@@ -143,6 +157,7 @@ let disjoin x y =
   else if y = RTrue then RTrue
   else ROr(x, y)
 
+(*
 let subst_ariths id rint l = match rint with 
   | RId id' -> 
     List.map (Trans.Subst.Arith.arith id (Arith.Var(id'))) l
@@ -167,7 +182,7 @@ let rec subst_refinement_with_ids body l = match l with
   | [] -> body
   | (x, y):: xs -> 
     subst_refinement_with_ids (subst_refinement x y body) xs
-
+*)
 (* check if refinement contains template *)
 let rec does_contain_pred = function 
   | RTemplate _ -> true
