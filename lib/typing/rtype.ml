@@ -24,6 +24,10 @@ and refinement
    | RTemplate of template
 and template = id * Arith.t list * Arith.lt list (* template prdicate name and its args *)
 
+type rprim = 
+  | RIntP of rint
+  | RListP of rlist
+
 let id_source = ref 0
 let id_top = 0
 let created = ref false
@@ -157,23 +161,32 @@ let disjoin x y =
   else if y = RTrue then RTrue
   else ROr(x, y)
 
-(*
+
 let subst_ariths id rint l = match rint with 
   | RId id' -> 
     List.map (Trans.Subst.Arith.arith id (Arith.Var(id'))) l
   | RArith a ->
     List.map (Trans.Subst.Arith.arith id a) l
 
-let rec subst_refinement id rint = function
-  | RPred (p, l) -> RPred(p, subst_ariths id rint l)
-  | RAnd(x, y) -> conjoin (subst_refinement id rint x) (subst_refinement id rint y)
-  | ROr(x, y) -> ROr(subst_refinement id rint x, subst_refinement id rint y)
-  | RTemplate(id', l) -> RTemplate(id', subst_ariths id rint l)
-  | x -> x
+let subst_ls_ariths id rlist ls = match rlist with 
+  | RLId id' -> 
+    List.map (Trans.Subst.Arith.ls_arith id (Arith.LVar(id'))) ls
+  | RLsArith a ->
+    List.map (Trans.Subst.Arith.ls_arith id a) ls
 
-let rec subst id rint = function
-  | RBool r -> RBool(subst_refinement id rint r)
-  | RArrow(x, y) -> RArrow(subst id rint x, subst id rint y)
+let rec subst_refinement id (rprim:rprim) refinement = 
+  match (rprim, refinement) with
+  | (RIntP(rint), RPred (p, l)) -> RPred(p, subst_ariths id rint l)
+  | (RListP(rlist), RLsPred (p, l)) -> RLsPred(p, subst_ls_ariths id rlist l)
+  | (_, RAnd(x, y)) -> conjoin (subst_refinement id rprim x) (subst_refinement id rprim y)
+  | (_, ROr(x, y)) -> ROr(subst_refinement id rprim x, subst_refinement id rprim y)
+  | (RIntP(rint), RTemplate(id', l, ls)) -> RTemplate(id', subst_ariths id rint l, ls)
+  | (RListP(rlist), RTemplate(id', l, ls)) -> RTemplate(id', l, subst_ls_ariths id rlist ls)
+  | (_, x) -> x
+
+let rec subst id rprim = function
+  | RBool r -> RBool(subst_refinement id rprim r)
+  | RArrow(x, y) -> RArrow(subst id rprim x, subst id rprim y)
   | RInt x -> RInt x
   | RList x -> RList x
 
@@ -182,7 +195,7 @@ let rec subst_refinement_with_ids body l = match l with
   | [] -> body
   | (x, y):: xs -> 
     subst_refinement_with_ids (subst_refinement x y body) xs
-*)
+
 (* check if refinement contains template *)
 let rec does_contain_pred = function 
   | RTemplate _ -> true
