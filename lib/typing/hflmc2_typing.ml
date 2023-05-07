@@ -67,9 +67,10 @@ let generate_anno_env_ty (aty: Hflmc2_syntax.Type.abstraction_ty) (rty: Rtype.t)
       match fml with
       | [fml] -> begin
         let fml = subst_fml env fml in
+        let (id, args, lsargs) = template in
         let template_args =
-          List.map (fun t -> match t with Arith.Var v -> v | _ -> assert false) (snd template) in
-        Rid.M.singleton (fst template) (fml, template_args)
+          List.map (fun t -> match t with Arith.Var v -> v | _ -> assert false) args in
+        Rid.M.singleton id (fml, template_args)
       end
       | [] -> Rid.M.empty
       | _ -> assert false

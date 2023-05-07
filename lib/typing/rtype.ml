@@ -57,15 +57,16 @@ let generate_top_template args  =
 
 (* let generate_rtemplate args = RTemplate(generate_id(), args) *)
 
-(* clone
-let rec clone_type_with_new_pred ints = function
-  | RBool(RTemplate(_, _)) -> RBool(RTemplate(generate_id (), ints))
+let rec clone_type_with_new_pred ints lists = function
+  | RBool(RTemplate(_, _, _)) -> RBool(RTemplate(generate_id (), ints, lists))
   | RArrow(RInt(RId(id)), y) ->
-    RArrow(RInt(RId(id)), clone_type_with_new_pred (Arith.Var(id)::ints) y) 
+    RArrow(RInt(RId(id)), clone_type_with_new_pred (Arith.Var(id)::ints) lists y) 
+  | RArrow(RList(RLId(id)), y) ->
+    RArrow(RList(RLId(id)), clone_type_with_new_pred ints (Arith.LVar(id)::lists) y) 
   | RArrow(x, y) -> 
-    RArrow(clone_type_with_new_pred ints x, clone_type_with_new_pred ints y)
+    RArrow(clone_type_with_new_pred ints lists x, clone_type_with_new_pred ints lists y)
   | x -> x
-*)
+
 
 let pp_comma : unit Fmt.t = fun ppf () -> Fmt.string ppf ","
 

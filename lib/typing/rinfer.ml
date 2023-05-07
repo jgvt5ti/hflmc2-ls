@@ -48,10 +48,10 @@ let rec rty = function
 
 let add_constraint x m = 
   match x.head with
-  | RTemplate(p, l) ->
+  | RTemplate(p, l, q) ->
   begin
     let rec find_template = function 
-      | RTemplate(p', l') when p = p' && l = l' -> true
+      | RTemplate(p', l', q') when p = p' && l = l' && q = q' -> true
       | RAnd(x, y) -> find_template x || find_template y
       | _ -> false
     in
@@ -67,8 +67,8 @@ let rec _subtype t t' renv m =
  | RArrow(RInt(RId(x)), t), RArrow(RInt(RId(y)), t')  ->
    (* substitute generate new variable and substitute t and t' by the new var *)
    let v = new_var () in
-   let t2 = subst x v t in
-   let t2' = subst y v t' in
+   let t2 = subst x (RIntP(v)) t in
+   let t2' = subst y (RIntP(v)) t' in
    _subtype t2 t2' renv m
  | RArrow(t, s), RArrow(t', s') ->
    let m' = 
@@ -88,7 +88,7 @@ let rec _subtype t t' renv m =
 let subtype t t' m = _subtype t t' RTrue m
 
 (* track: tracking And/Forall to track counterexample *)
-let rec infer_formula track formula env m ints = 
+let rec infer_formula track formula env m ints lists = 
   match formula with
   | Bool b when b -> (RBool(RTrue), m)
   | Bool _ -> (RBool(RFalse), m)
@@ -102,43 +102,49 @@ let rec infer_formula track formula env m ints =
     end
   | Abs (arg, body) -> 
     let env' = IdMap.add env arg arg.ty in
-    let ints' = 
+    let (ints', lists') = 
       begin
       match arg.ty with
       | RInt (RId(i)) -> 
-        Arith.Var(i)::ints
-      | _ -> ints 
+        (Arith.Var(i)::ints, lists)
+      | RList (RLId(i)) -> 
+        (ints, Arith.LVar(i)::lists)
+      | _ -> (ints, lists) 
       end
     in
-    let (body_t, l) = infer_formula track body env' m ints' in
+    let (body_t, l) = infer_formula track body env' m ints' lists' in
     (RArrow(arg.ty, body_t), l)
   | Forall(arg, body, template) ->
     let env' = IdMap.add env arg arg.ty in
-    let ints' = 
+    let (ints', lists') = 
       begin
       match arg.ty with
       | RInt (RId(i)) -> 
-        Arith.Var(i)::ints
-      | _ -> ints 
+        (Arith.Var(i)::ints, lists)
+      | RList (RLId(i)) -> 
+        (ints, Arith.LVar(i)::lists)
+      | _ -> (ints, lists) 
       end
     in
-    let (body_t, l) = infer_formula track body env' m ints' in
+    let (body_t, l) = infer_formula track body env' m ints' lists' in
     let template = (RBool(RTemplate template)) in
     let l'' = subtype body_t template l in
     (template, l'')
   | Pred (f, args) -> (RBool(RPred(f, args)), m)
   | Arith x -> (RInt (RArith x), m)
   | Or (x, y, _, _) ->
-    let (x', mx) = infer_formula track x env m ints in
-    let (y', m') = infer_formula track y env mx ints in
+    let (x', mx) = infer_formula track x env m ints lists in
+    let (y', m') = infer_formula track y env mx ints lists in
     let (rx, ry) = match (x', y') with
       | (RBool(rx), RBool(ry)) -> (rx, ry)
       | _ -> failwith "type is not correct"
     in 
     RBool(ROr(rx, ry)), m'
+  | LsArith x -> (RList (RLsArith x), m)
+  | LsPred (f, args) -> (RBool(RLsPred(f, args)), m)
   | And (x, y, t1, t2) -> 
-    let (x', mx) = infer_formula track x env m ints in
-    let (y', m') = infer_formula track y env mx ints in
+    let (x', mx) = infer_formula track x env m ints lists in
+    let (y', m') = infer_formula track y env mx ints lists in
     let (rx, ry) = match (x', y') with
       | (RBool(rx), RBool(ry)) -> (rx, ry)
       | _ -> failwith "type is not correct"
@@ -152,17 +158,19 @@ let rec infer_formula track formula env m ints =
     else
       RBool(RAnd(rx, ry)), m'
   | App(x, y, _) -> 
-    let (x', mx) = infer_formula track x env m ints in
-    let (y', m') = infer_formula track y env mx ints in
+    let (x', mx) = infer_formula track x env m ints lists in
+    let (y', m') = infer_formula track y env mx ints lists in
     let (arg, body, tau) = match (x', y') with
       | (RArrow(arg, body), tau) -> (arg, body, tau)
       | _ -> failwith "type is not correct"
     in begin
       match (arg, tau) with
        | RInt(RId(id)), RInt m -> 
-         (subst id m body, m')
+         (subst id (RIntP(m)) body, m')
+       | RList(RLId(id)), RList m -> 
+         (subst id (RListP(m)) body, m')
        | _ ->
-        let body' = clone_type_with_new_pred ints body in 
+        let body' = clone_type_with_new_pred ints lists body in 
         (*
         print_string "subtyping...";
         print_rtype @@ RArrow(arg, body); print_string " =? "; print_rtype @@ RArrow(tau, body'); print_newline();
@@ -178,7 +186,7 @@ let infer_rule track (rule: hes_rule) env (chcs: (refinement, refinement) chc li
   Printf.printf "%s = " rule.var.name;
   print_formula rule.body;
   print_newline();
-  let (t, m) = infer_formula track rule.body env chcs [] in
+  let (t, m) = infer_formula track rule.body env chcs [] [] in
   let m = subtype t rule.var.ty m in
   print_string "[Result]\n";
   print_constraints m;
@@ -266,7 +274,7 @@ let print_derived_refinement_type is_dual_chc (anno_env : (('a, [ `Int ] Id.t, _
     match map with 
     | [] -> t
     | (src, dst):: xs -> 
-      t |> subst_refinement src (RArith dst) |> subst_ids xs
+      t |> subst_refinement src (RIntP(RArith(dst))) |> subst_ids xs
   in
   let rec zip l r = match (l, r) with 
     | [], [] -> []
@@ -275,7 +283,7 @@ let print_derived_refinement_type is_dual_chc (anno_env : (('a, [ `Int ] Id.t, _
   in
   let rec translate_ty = function 
     | RArrow (x, y) -> RArrow(translate_ty x, translate_ty y)
-    | RBool(RTemplate(p, l)) -> 
+    | RBool(RTemplate(p, l, _)) -> 
       let (args, body) = Rid.M.find p m in
       let map = zip args l in
       let body' = subst_ids map body in

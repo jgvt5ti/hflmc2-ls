@@ -16,7 +16,7 @@ module Log = (val Logs.src_log log_src)
 module Subst = struct
   type 'x env = 'x IdMap.t
   module Id = struct
-    let rec arith : [`Int ] S.Id.t env -> S.Arith.t -> S.Arith.t =
+    let rec arith : 'a S.Id.t env -> S.Arith.t -> S.Arith.t =
       fun env a ->
         match a with
         | Int _ -> a
@@ -26,6 +26,17 @@ module Subst = struct
             | Some v' -> Var v'
             end
         | Op(op, as') -> Op(op, List.map ~f:(arith env) as')
+
+    let rec ls_arith : 'a S.Id.t env -> S.Arith.lt -> S.Arith.lt =
+      fun env a ->
+        match a with
+        | Nil -> a
+        | LVar v ->
+            begin match IdMap.find env v with
+            | None -> a
+            | Some v' -> LVar v'
+            end
+        | Cons(hd, tl) -> Cons(hd ,ls_arith env tl)
 
     let rec formula : [`Int ] S.Id.t IdMap.t -> S.Formula.t -> S.Formula.t =
       fun env p ->
@@ -63,6 +74,20 @@ module Subst = struct
         | Op(op, as') -> Op(op, List.map ~f:(arith_ equal x a) as')
     let arith : 'a. 'a S.Id.t -> S.Arith.t -> S.Arith.t -> S.Arith.t =
       fun x a a' -> arith_ S.Id.eq {x with ty=`Int} a a'
+
+    let rec ls_arith_
+              : ('lvar -> 'lvar -> bool)
+             -> 'lvar
+             -> ('avar, 'lvar) S.Arith.gen_lt
+             -> ('avar, 'lvar) S.Arith.gen_lt
+             -> ('avar, 'lvar) S.Arith.gen_lt =
+      fun equal x a a' ->
+        match a' with
+        | Nil -> a'
+        | LVar x' -> if equal x x' then a else a'
+        | Cons(hd, tl) -> Cons(hd, ls_arith_ equal x a tl)
+    let ls_arith : 'a. 'a S.Id.t -> S.Arith.lt -> S.Arith.lt -> S.Arith.lt =
+      fun x a a' -> ls_arith_ S.Id.eq {x with ty=`List} a a'
 
     let rec formula_
               : ('var -> 'var -> bool)

@@ -62,7 +62,7 @@ let expand unsat_proof hes =
     end
   in
   let count_rule map rule = 
-    let id, _ = Rtype.get_top rule.var.ty in
+    let id, _, _ = Rtype.get_top rule.var.ty in
     List.length @@ (match M.find_opt id map with Some(l) -> l | None -> [])
   in
   let rec subst_rules fml var rules = 
@@ -102,7 +102,7 @@ let expand unsat_proof hes =
   let args_map =
     let map = gen_args_map unsat_proof in
     List.map (fun rule ->
-      let id, _ = Rtype.get_top rule.var.ty in
+      let id, _, _ = Rtype.get_top rule.var.ty in
       match M.find_opt id map with Some(l) -> List.map (fun (_, args) -> (rule.var, args)) l | None -> []
     ) hes in
   expand_rule hes hes, args_map

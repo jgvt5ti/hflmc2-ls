@@ -120,7 +120,7 @@ let get_epilogue =
 
 let rec collect_preds chcs m = 
   let rec inner rt m = match rt with 
-  | RTemplate (p, l) -> Rid.M.add p (List.length l) m
+  | RTemplate (p, l, _) -> Rid.M.add p (List.length l) m
   | RAnd(x, y) | ROr(x, y) ->
     m |> inner x |> inner y
   | _ -> m
@@ -141,7 +141,7 @@ let collect_vars chc =
       m |> collect_from_arith x |> collect_from_ariths xs
   in
   let rec inner rt m = match rt with
-  | RTemplate(_, l) | RPred(_, l) -> 
+  | RTemplate(_, l, _) | RPred(_, l) -> 
     collect_from_ariths l m
   | RAnd(x, y) | ROr(x, y) -> 
     m |> inner x |> inner y
