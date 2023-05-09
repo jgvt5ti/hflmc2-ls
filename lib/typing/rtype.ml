@@ -84,7 +84,11 @@ let pp_rint ppf = function
     Print.id ppf x
   | RArith x -> 
     Print.arith ppf x
-
+let pp_rlist ppf = function
+  | RLId x -> 
+    Print.id ppf x
+  | RLsArith __FILE__ -> 
+    Fmt.string ppf "ls_exp" (*todo*)
 
 let rtype_pred : Formula.pred Fmt.t =
   fun ppf pred -> match pred with
@@ -134,7 +138,9 @@ let rec pp_rtype prec ppf = function
   | RInt x ->
     Fmt.pf ppf "@[%a:int@]"
       pp_rint x
-  | _ -> () (* todo: pp list *)
+  | RList x ->
+    Fmt.pf ppf "@[%a:list@]"
+      pp_rlist x
 
 let print_rtype x =
   pp_rtype (Print.Prec.zero) Fmt.stdout x;

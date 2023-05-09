@@ -118,6 +118,19 @@ let arith_ : Prec.t -> Arith.t Fmt.t =
   fun prec ppf a -> gen_arith_ id_ prec ppf a
 let arith : Arith.t Fmt.t = arith_ Prec.zero
 
+(*
+let rec gen_ls_arith_ : ('avar * 'lvar) t_with_prec -> ('avar, 'lvar) Arith.gen_lt t_with_prec =
+  fun avar_ prec ppf a -> match a with
+    | Nil -> Fmt.string ppf "[]"
+    | LVar x -> Fmt.string ppf (Id.to_string x)
+    | Cons (hd, tl) -> Fmt.string ppf "::" (*todo*)
+
+let gen_ls_arith : ('avar * 'lvar) t_with_prec -> ('avar, 'lvar) Arith.gen_lt t =
+  fun avar_ ppf a -> gen_ls_arith_ avar_ Prec.zero ppf a
+let ls_arith_ : Prec.t -> Arith.lt Fmt.t =
+  fun prec ppf a -> gen_ls_arith_ lid_ prec ppf a
+let ls_arith : Arith.lt Fmt.t = ls_arith_ Prec.zero
+*)
 (* Formula *)
 
 let pred : Formula.pred t =
@@ -309,10 +322,14 @@ let rec hflz_ : (Prec.t -> 'ty Fmt.t) -> Prec.t -> 'ty Hflz.t Fmt.t =
           (hflz_ format_ty_ Prec.(succ app)) psi2
     | Arith a ->
         arith_ prec ppf a
+    | LsArith a ->
+        Fmt.string ppf "lsterm" (*todo*)
     | Pred (pred, as') ->
         show_paren (prec > Prec.eq) ppf "%a"
           formula (Formula.Pred(pred, as'))
-    | _ -> Fmt.string ppf "ls" (* TODO:print list values/predicates *)
+    | LsPred (pred, as') ->
+        Fmt.string ppf "lspred"
+
 let hflz : (Prec.t -> 'ty Fmt.t) -> 'ty Hflz.t Fmt.t =
   fun format_ty_ -> hflz_ format_ty_ Prec.zero
 

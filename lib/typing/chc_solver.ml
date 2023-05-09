@@ -94,7 +94,7 @@ let selected_cex_cmd = function
     [|"eld"; "-cex";  "-hsmt"|]
   | _ -> failwith "you cannot use this"
 
-let prologue = "(set-logic HORN)
+let prologue = "(declare-fun XX ( (List Int)) Bool)
 "
 
 let get_epilogue = 
@@ -120,7 +120,7 @@ let get_epilogue =
 
 let rec collect_preds chcs m = 
   let rec inner rt m = match rt with 
-  | RTemplate (p, l, _) -> Rid.M.add p (List.length l) m
+  | RTemplate (p, l, ls) -> Rid.M.add p (List.length l, List.length ls) m
   | RAnd(x, y) | ROr(x, y) ->
     m |> inner x |> inner y
   | _ -> m
@@ -140,19 +140,39 @@ let collect_vars chc =
     | x::xs -> 
       m |> collect_from_arith x |> collect_from_ariths xs
   in
-  let rec inner rt m = match rt with
-  | RTemplate(_, l, _) | RPred(_, l) -> 
-    collect_from_ariths l m
-  | RAnd(x, y) | ROr(x, y) -> 
-    m |> inner x |> inner y
-  | _ -> m
-  in 
-  IdSet.empty |> inner chc.head |> inner chc.body
+  let collect_from_ls_arith a m1 m2 =
+    let (afvs, lfvs) = Arith.lfvs a in
+    (List.fold_left IdSet.add m1 afvs, List.fold_left IdSet.add m2 lfvs)
+  in
+  let rec collect_from_ls_ariths ars m1 m2 = match ars with
+    | [] -> (m1, m2)
+    | x::xs ->
+      let (set1, set2) = collect_from_ls_arith x m1 m2 in
+      collect_from_ls_ariths xs set1 set2
+  in
+  let rec inner rt m1 m2 = match rt with
+  | RTemplate(_, l, ls) -> 
+    let avar1 = collect_from_ariths l m1 in
+    let (avar2, lvar) = collect_from_ls_ariths ls m1 m2 in
+    (IdSet.union avar1 avar2, lvar)
+  | RPred(_, l) ->
+    collect_from_ariths l m1, m2
+  | RLsPred(_, ls) ->
+    collect_from_ls_ariths ls m1 m2
+  | RAnd(x, y) | ROr(x, y) ->
+    let (m1, m2) = inner x m1 m2 in
+    inner y m1 m2
+  | _ -> (m1, m2)
+  in
+  let (m1, m2) = inner chc.head IdSet.empty IdSet.empty in
+  inner chc.body m1 m2
 
 
 let gen_assert solver chc =
-  let vars = collect_vars chc in
-  let vars_s = vars |> IdSet.to_list |> List.map var_def |> List.fold_left (^) "" in
+  let (avars, lvars) = collect_vars chc in
+  let vars_s = avars |> IdSet.to_list |> List.map var_def |> List.fold_left (^) "" in
+  let lvars_s = lvars |> IdSet.to_list |> List.map lvar_def |> List.fold_left (^) "" in
+  let vars_s = vars_s ^ lvars_s in
   let body = ref2smt2 chc.body in
   let head = ref2smt2 chc.head in
   let s = Printf.sprintf "(=> %s %s)" body head in
@@ -162,7 +182,8 @@ let gen_assert solver chc =
     Printf.sprintf "(assert (forall (%s) %s))\n" vars_s s  
   
 let chc2smt2 env chcs solver = 
-  let preds = collect_preds chcs Rid.M.empty in
+  let empty: (int * int) Rid.M.t = Rid.M.empty in
+  let preds = collect_preds chcs empty in
   let preds =
     Rid.M.filter
       (fun id _ ->

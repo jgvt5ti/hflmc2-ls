@@ -41,6 +41,7 @@ let report_times () =
 (* The above code should be merged in hflmc2.ml... *)
 
 let new_var () = RId(Id.gen `Int)
+let new_lvar () = RLId(Id.gen `List)
 let rec rty = function
   | RArrow(_, s) -> rty s
   | RBool(phi) -> phi
@@ -69,6 +70,12 @@ let rec _subtype t t' renv m =
    let v = new_var () in
    let t2 = subst x (RIntP(v)) t in
    let t2' = subst y (RIntP(v)) t' in
+   _subtype t2 t2' renv m
+ | RArrow(RList(RLId(x)), t), RArrow(RList(RLId(y)), t')  ->
+   (* substitute generate new variable and substitute t and t' by the new var *)
+   let v = new_lvar () in
+   let t2 = subst x (RListP(v)) t in
+   let t2' = subst y (RListP(v)) t' in
    _subtype t2 t2' renv m
  | RArrow(t, s), RArrow(t', s') ->
    let m' = 
@@ -241,6 +248,8 @@ let formula_to_refinement fml =
       g fs
     | Pred (p, as') ->
       RPred (p, as')
+    | LsPred (p, as') ->
+      RLsPred (p, as')
   in
   go fml
   

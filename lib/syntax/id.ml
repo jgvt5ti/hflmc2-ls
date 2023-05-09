@@ -1,7 +1,7 @@
 open Hflmc2_util
 
 (** ['ty] is typically a type of the id *)
-type 'ty t =
+type +'ty t =
   { name : string
   ; id   : int
   ; ty   : 'ty
