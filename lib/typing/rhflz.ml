@@ -52,7 +52,7 @@ let rec print_formula = function
     Printf.printf ".";
     print_formula y;
     Printf.printf ")"
-  | App (x, y, template) -> 
+  | App (x, y, _) -> 
     Printf.printf "(";
     print_formula x;
     Printf.printf " ";
@@ -61,15 +61,25 @@ let rec print_formula = function
   | Arith x ->
     Print.arith Fmt.stdout x;
     Fmt.flush Fmt.stdout () 
+  | LsArith x ->
+    Print.ls_arith Fmt.stdout x;
+    Fmt.flush Fmt.stdout () 
   | Pred (x,[f1; f2]) -> 
     Print.arith Fmt.stdout f1;
     Print.pred Fmt.stdout x;
     Print.arith Fmt.stdout f2;
     Fmt.flush Fmt.stdout () ;
+  | LsPred (x,[f1; f2]) -> 
+    Print.ls_arith Fmt.stdout f1;
+    Print.ls_pred Fmt.stdout x;
+    Print.ls_arith Fmt.stdout f2;
+    Fmt.flush Fmt.stdout () ;
   | Pred (x,_) -> 
     Print.pred Fmt.stdout x;
+    Fmt.flush Fmt.stdout ()
+  | LsPred (x,_) -> 
+    Print.ls_pred Fmt.stdout x;
     Fmt.flush Fmt.stdout () 
-  | _ -> ()
 
 let rec is_simple p = match p with
   | And(x, y, _, _) | Or(x, y, _, _) -> (is_simple x && is_simple y)

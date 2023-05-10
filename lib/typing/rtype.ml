@@ -87,8 +87,8 @@ let pp_rint ppf = function
 let pp_rlist ppf = function
   | RLId x -> 
     Print.id ppf x
-  | RLsArith __FILE__ -> 
-    Fmt.string ppf "ls_exp" (*todo*)
+  | RLsArith x -> 
+    Print.ls_arith ppf x
 
 let rtype_pred : Formula.pred Fmt.t =
   fun ppf pred -> match pred with
@@ -99,6 +99,11 @@ let rtype_pred : Formula.pred Fmt.t =
     | Lt  -> Fmt.string ppf "<"
     | Gt  -> Fmt.string ppf ">"
   
+let rtype_ls_pred : Formula.ls_pred Fmt.t =
+  fun ppf pred -> match pred with
+    | Eql  -> Fmt.string ppf "=l"
+    | Neql -> Fmt.string ppf "!=l"
+
 let rec pp_refinement prec ppf = function
   | RTrue -> Fmt.string ppf "true"
   | RFalse -> Fmt.string ppf "false"
@@ -109,6 +114,13 @@ let rec pp_refinement prec ppf = function
       Print.arith f2
   | RPred (x, _) -> 
     rtype_pred ppf x
+  | RLsPred (x, [f1; f2]) -> 
+    Print.show_paren (prec > Print.Prec.eq) ppf "@[<hv 0>%a@ %a@ %a@]"
+      Print.ls_arith f1
+      rtype_ls_pred x
+      Print.ls_arith f2
+  | RLsPred (x, _) -> 
+    rtype_ls_pred ppf x
   | RAnd(x, y) -> 
     Print.show_paren (prec > Print.Prec.and_) ppf "@[<hv 0>%a@ /\\ %a@]"
       (pp_refinement Print.Prec.and_) x
