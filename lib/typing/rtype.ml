@@ -70,13 +70,13 @@ let rec clone_type_with_new_pred ints lists = function
 
 let pp_comma : unit Fmt.t = fun ppf () -> Fmt.string ppf ","
 
-let pp_template ppf (id, l) = 
-  Fmt.pf ppf "@[X%d(@[<hv 0>%a@])@]"
+let pp_template ppf (id, l, ls) = 
+  Fmt.pf ppf "@[X%d(@[<hv 0>%a@];@[<hv 0>%a@])@]"
     id
     (Fmt.list ~sep:pp_comma Print.arith) l
-
-let print_template : template -> unit = fun (id, x, _) ->
-  pp_template Fmt.stdout (id, x);
+    (Fmt.list ~sep:pp_comma Print.ls_arith) ls
+let print_template : template -> unit = fun (id, x, ls) ->
+  pp_template Fmt.stdout (id, x, ls);
   Fmt.flush Fmt.stdout ()
 
 let pp_rint ppf = function
@@ -133,7 +133,7 @@ let rec pp_refinement prec ppf = function
     Print.show_paren (prec > Print.Prec.abs) ppf "@[<1>∃%a.@,%a@]"
       Print.id x
       (pp_refinement Print.Prec.abs) f
-  | RTemplate t -> () (*pp_template ppf t *)
+  | RTemplate t -> pp_template ppf t
   | _ -> () (* todo: pp list *)
 
 let rec pp_rtype prec ppf = function
