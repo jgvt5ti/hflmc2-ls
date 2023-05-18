@@ -134,7 +134,6 @@ let rec pp_refinement prec ppf = function
       Print.id x
       (pp_refinement Print.Prec.abs) f
   | RTemplate t -> pp_template ppf t
-  | _ -> () (* todo: pp list *)
 
 let rec pp_rtype prec ppf = function
   | RBool r -> begin
