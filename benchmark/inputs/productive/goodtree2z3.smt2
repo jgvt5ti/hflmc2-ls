@@ -35,7 +35,7 @@
 (assert (forall ((hd8 Int)(u7 Int)(x45 Int)(ls5 List)(tl9 List)) (=> (X68  x45 hd8 u7  tl9 ls5) (X2  x45  tl9))))
 (assert (forall ((hd8 Int)(u7 Int)(u22 Int)(x44 Int)(ls5 List)(tl9 List)) (=> (and (X68  u22 hd8 u7  tl9 ls5) (X1  x44  tl9)) (X56  x44 ))))
 (assert (forall ((ls3 List)) (=> X59 (X60   ls3))))
-(assert (forall ((tmp58 Int)(ls3 List)) (=> (and (Length ls3 tmp58) (X60   ls3)) (X67  tmp58  ls3))))
+(assert (forall ((tmp58 Int)(ls3 List)) (=> (and (Length ls3 tmp58) (X60   ls3)) (X67  (+ 1 tmp58)  ls3))))
 (assert (forall ((x42 Int)(ls3 List)) (=> (X67  x42  ls3) (X2  x42  ls3))))
 (assert (forall ((u22 Int)(x41 Int)(ls3 List)) (=> (and (X67  u22  ls3) (X1  x41  ls3)) (X56  x41 ))))
 (assert X59)
