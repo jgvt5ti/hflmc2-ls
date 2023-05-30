@@ -1,7 +1,8 @@
 (set-logic HORN)
 (declare-datatypes ((List 0)) (((insert (head Int) (tail List)) (nil))))
-(define-fun-rec length ((ls List)) Int
-   (ite (= nil ls) 0 (+ 1 (length (tail ls)))))
+(declare-fun Length (List Int) Bool)
+(assert (forall ((ls List)) (=> (= ls nil) (Length ls 0))))
+(assert (forall ((n Int)(hd Int)(tl List)) (=> (Length tl n) (Length (insert hd tl) (+ 1 n)))))
 (declare-fun X1 (Int List) Bool)
 (declare-fun X2 (Int List) Bool)
 (declare-fun X3 (Int List) Bool)
@@ -21,10 +22,8 @@
 (assert (forall ((hd8 Int)(u7 Int)(x32 Int)(ls5 List)(tl9 List)) (=> (X36  x32 hd8 u7  tl9 ls5) (X2  x32  tl9))))
 (assert (forall ((hd8 Int)(u7 Int)(u20 Int)(x31 Int)(ls5 List)(tl9 List)) (=> (and (X36  u20 hd8 u7  tl9 ls5) (X1  x31  tl9)) (X24  x31 ))))
 (assert (forall ((ls3 List)) (=> X27 (X28   ls3))))
-(assert (forall ((tmp38 Int)(ls3 List)) (=> (and (=  tmp38 (+ 1 (length ls3))) (X28   ls3)) (X35  tmp38  ls3))))
+(assert (forall ((tmp38 Int)(ls3 List)) (=> (and (Length ls3 tmp38) (X28   ls3)) (X35  (+ 1 tmp38)  ls3))))
 (assert (forall ((x29 Int)(ls3 List)) (=> (X35  x29  ls3) (X2  x29  ls3))))
 (assert (forall ((u20 Int)(x28 Int)(ls3 List)) (=> (and (X35  u20  ls3) (X1  x28  ls3)) (X24  x28 ))))
 (assert X27)
-(check-sat-using (then simplify solve-eqs smt))
-(get-model)
-    
+(check-sat)
