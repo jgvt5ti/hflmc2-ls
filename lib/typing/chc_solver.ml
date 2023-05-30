@@ -94,8 +94,9 @@ let selected_cex_cmd = function
     [|"eld"; "-cex";  "-hsmt"|]
   | _ -> failwith "you cannot use this"
 
-let prologue = "(define-fun-rec length ((ls (List Int))) Int
-   (ite (= nil ls) 0 (+ 1 (length (tail ls)))))
+(*(define-fun-rec length ((ls (List Int))) Int
+   (ite (= nil ls) 0 (+ 1 (length (tail ls)))))*)
+let prologue = "
 "
 
 let get_epilogue = 

@@ -1,0 +1,6 @@
+%HES
+S =v ∀ls. G ls A 112.
+A n =v A n.
+G ls k u =v u > 0 /\ ∀hd.∀tl.(ls <>l [] \/ k 0) /\
+(ls <>l (hd :: tl) \/
+  (hd <> 0 \/ G tl A (u - 1))).

@@ -1,3 +1,4 @@
 %HES
-S =v L (1::(2::[])) 2.
+S =v A [] 0.
+A ls n =v L ls n /\ A (0 :: ls) (n + 1).
 L ls n =v (ls <>l [] \/ n = 0) /\ ∀hd. ∀tl. (ls <>l (hd :: tl) \/ L tl (n - 1)).
