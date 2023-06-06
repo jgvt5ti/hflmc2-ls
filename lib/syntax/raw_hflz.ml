@@ -11,7 +11,7 @@ type raw_hflz =
   | Cons of raw_hflz * raw_hflz
   | Op   of Arith.op * raw_hflz list
   | Pred of Formula.pred * raw_hflz list
-  | LsPred of Formula.ls_pred * raw_hflz list
+  | LsPred of Formula.ls_pred * raw_hflz list * raw_hflz list
   | Forall of string * raw_hflz
   [@@deriving eq,ord,show,iter,map,fold,sexp]
 type hes_rule =
@@ -41,7 +41,8 @@ let mk_ors = function
   | x::xs -> List.fold_left xs ~init:x ~f:(fun a b -> Or(a,b))
 
 let mk_pred pred a1 a2 = Pred(pred, [a1;a2])
-let mk_lspred pred a1 a2 = LsPred(pred, [a1;a2])
+let mk_lspred pred a1 a2 = LsPred(pred, [], [a1;a2])
+let mk_sizepred pred as' ls' = LsPred (pred, [as'], [ls'])
 let mk_app t1 t2 = App(t1,t2)
 let mk_apps t ts = List.fold_left ts ~init:t ~f:mk_app
 
@@ -285,9 +286,9 @@ module Typing = struct
         | Pred (pred,as') ->
             unify tv TvBool;
             Pred(pred, List.map ~f:(self#arith id_env) as')
-        | LsPred (pred,as') ->
+        | LsPred (pred,as',ls') ->
             unify tv TvBool;
-            LsPred(pred, List.map ~f:(self#ls_arith id_env) as')
+            LsPred(pred, List.map ~f:(self#arith id_env) as', List.map ~f:(self#ls_arith id_env) ls')
         | Int _ | Op _ ->
             unify tv TvInt;
             Arith (self#arith id_env psi)
@@ -421,7 +422,7 @@ module Typing = struct
       | Arith a          -> Arith a
       | LsArith a        -> LsArith a
       | Pred (pred,as')  -> Pred(pred, as')
-      | LsPred (pred,as')-> LsPred(pred, as')
+      | LsPred (pred,as',ls')-> LsPred(pred, as',ls')
 
     method hes_rule : unit Hflz.hes_rule -> simple_ty Hflz.hes_rule =
       fun rule ->
@@ -506,7 +507,7 @@ let rename_ty_body : simple_ty Hflz.hes -> simple_ty Hflz.hes =
         | Arith a          -> Arith a
         | LsArith a          -> LsArith a
         | Pred (pred, as') -> Pred (pred, as')
-        | LsPred (pred, as') -> LsPred (pred, as')
+        | LsPred (pred, as', ls') -> LsPred (pred, as', ls')
         | Abs ({ty=TySigma ty;_} as x, psi) ->
             Abs(x, term (IdMap.add env x ty) psi)
         | Abs (x, psi) -> Abs(x, term env psi)

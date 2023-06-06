@@ -159,6 +159,8 @@ let ls_pred : Formula.ls_pred t =
   fun ppf pred -> match pred with
     | Eql  -> Fmt.string ppf "=l"
     | Neql -> Fmt.string ppf "/=l"
+    | Len -> Fmt.string ppf "len"
+    | NLen -> Fmt.string ppf "nlen"
 
 let ls_pred_ : Formula.pred t_with_prec =
   ignore_prec pred
@@ -185,10 +187,15 @@ let rec gen_formula_
           pred pred'
           (gen_arith_ avar prec) f2
     | Pred _ -> assert false
-    | LsPred(pred', [f1;f2]) ->
+    | LsPred(pred', [], [f1;f2]) ->
         Fmt.pf ppf "@[<1>%a@ %a@ %a@]"
           (gen_ls_arith_ avar prec) f1
           ls_pred pred'
+          (gen_ls_arith_ avar prec) f2
+    | LsPred(pred', [f1], [f2]) ->
+        Fmt.pf ppf "@[<1>%a@ %a@ %a@]"
+          ls_pred pred'
+          (gen_arith_ avar prec) f1
           (gen_ls_arith_ avar prec) f2
     | _ -> assert false
 let gen_formula
@@ -351,9 +358,9 @@ let rec hflz_ : (Prec.t -> 'ty Fmt.t) -> Prec.t -> 'ty Hflz.t Fmt.t =
     | Pred (pred, as') ->
         show_paren (prec > Prec.eq) ppf "%a"
           formula (Formula.Pred(pred, as'))
-    | LsPred (pred, as') ->
+    | LsPred (pred, as', ls') ->
         show_paren (prec > Prec.eq) ppf "%a"
-          formula (Formula.LsPred(pred, as'))
+          formula (Formula.LsPred(pred, as', ls'))
 
 let hflz : (Prec.t -> 'ty Fmt.t) -> 'ty Hflz.t Fmt.t =
   fun format_ty_ -> hflz_ format_ty_ Prec.zero

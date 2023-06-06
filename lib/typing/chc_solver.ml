@@ -85,7 +85,7 @@ let selected_cmd timeout = function
   | `Spacer -> call_template [|!Hflmc2_options.z3_path; "fp.engine=spacer"|] timeout
   | `Hoice -> call_template [|"hoice"; "--z3"; !Hflmc2_options.z3_path|] timeout
   | `Fptprove -> call_fptprove timeout  
-  | `Eldarica -> call_template [|"eld"|] timeout
+  | `Eldarica -> call_template [|"eld"; "-ssol"|] timeout
   | `Liu -> call_liu_solver timeout
   | _ -> failwith "you cannot use this"
   
@@ -96,7 +96,11 @@ let selected_cex_cmd = function
 
 (*(define-fun-rec length ((ls (List Int))) Int
    (ite (= nil ls) 0 (+ 1 (length (tail ls)))))*)
-let prologue = "
+let prologue = "(set-logic HORN)
+(declare-datatypes ((List 0)) (((insert (head Int) (tail List)) (nil))))
+(declare-fun Length (Int List) Bool)
+(assert (forall ((ls List)) (=> (= ls nil) (Length 0 ls))))
+(assert (forall ((n Int)(hd Int)(tl List)) (=> (Length n tl) (Length (+ 1 n) (insert hd tl)))))
 "
 
 let get_epilogue = 
@@ -159,8 +163,10 @@ let collect_vars chc =
     (IdSet.union avar1 avar2, lvar)
   | RPred(_, l) ->
     collect_from_ariths l m1, m2
-  | RLsPred(_, ls) ->
-    collect_from_ls_ariths ls m1 m2
+  | RLsPred(_, l, ls) ->
+    let (avar, _) = collect_from_ariths l m1, m2 in
+    let (_, lvar) = collect_from_ls_ariths ls m1 m2 in
+    (avar, lvar)
   | RAnd(x, y) | ROr(x, y) ->
     let (m1, m2) = inner x m1 m2 in
     inner y m1 m2

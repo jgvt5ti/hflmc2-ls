@@ -17,7 +17,7 @@ and refinement
   = RTrue
    | RFalse
    | RPred of Formula.pred * Arith.t list
-   | RLsPred of Formula.ls_pred * Arith.lt list
+   | RLsPred of Formula.ls_pred * Arith.t list * Arith.lt list
    | RAnd of refinement * refinement
    | ROr of refinement * refinement
    | RExists of [`Int | `List] Id.t * refinement
@@ -103,6 +103,8 @@ let rtype_ls_pred : Formula.ls_pred Fmt.t =
   fun ppf pred -> match pred with
     | Eql  -> Fmt.string ppf "=l"
     | Neql -> Fmt.string ppf "!=l"
+    | Len  -> Fmt.string ppf "len"
+    | NLen  -> Fmt.string ppf "nlen"
 
 let rec pp_refinement prec ppf = function
   | RTrue -> Fmt.string ppf "true"
@@ -114,12 +116,12 @@ let rec pp_refinement prec ppf = function
       Print.arith f2
   | RPred (x, _) -> 
     rtype_pred ppf x
-  | RLsPred (x, [f1; f2]) -> 
+  | RLsPred (x, [], [f1; f2]) -> 
     Print.show_paren (prec > Print.Prec.eq) ppf "@[<hv 0>%a@ %a@ %a@]"
       Print.ls_arith f1
       rtype_ls_pred x
       Print.ls_arith f2
-  | RLsPred (x, _) -> 
+  | RLsPred (x, _, _) -> 
     rtype_ls_pred ppf x
   | RAnd(x, y) -> 
     Print.show_paren (prec > Print.Prec.and_) ppf "@[<hv 0>%a@ /\\ %a@]"
@@ -195,7 +197,8 @@ let subst_ls_ariths id rlist ls = match rlist with
 let rec subst_refinement id (rprim:rprim) refinement = 
   match (rprim, refinement) with
   | (RIntP(rint), RPred (p, l)) -> RPred(p, subst_ariths id rint l)
-  | (RListP(rlist), RLsPred (p, l)) -> RLsPred(p, subst_ls_ariths id rlist l)
+  | (RIntP(rint), RLsPred (p, a, l)) -> RLsPred(p, subst_ariths id rint a, l)
+  | (RListP(rlist), RLsPred (p, a, l)) -> RLsPred(p, a, subst_ls_ariths id rlist l)
   | (_, RAnd(x, y)) -> conjoin (subst_refinement id rprim x) (subst_refinement id rprim y)
   | (_, ROr(x, y)) -> ROr(subst_refinement id rprim x, subst_refinement id rprim y)
   | (RIntP(rint), RTemplate(id', l, ls)) -> RTemplate(id', subst_ariths id rint l, ls)
@@ -235,7 +238,7 @@ let rec negate_ref = function
   | RTrue -> RFalse
   | RFalse -> RTrue
   | RPred(p, l) -> RPred(Formula.negate_pred p, l)
-  | RLsPred(p, l) -> RLsPred(Formula.negate_ls_pred p, l)
+  | RLsPred(p, a, l) -> RLsPred(Formula.negate_ls_pred p, a, l)
 
 let rec dual = function
   | RTemplate x -> RTemplate x
@@ -244,7 +247,7 @@ let rec dual = function
   | RTrue -> RFalse
   | RFalse -> RTrue
   | RPred(p, l) -> RPred(Formula.negate_pred p, l)
-  | RLsPred(p, l) -> RLsPred(Formula.negate_ls_pred p, l)
+  | RLsPred(p, a, l) -> RLsPred(Formula.negate_ls_pred p, a, l)
 
 (* This is an adhoc optimization of formulas. The reason why this function is required is
 that consider following program and its safety property problem.

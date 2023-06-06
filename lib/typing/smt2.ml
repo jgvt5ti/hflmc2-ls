@@ -47,6 +47,8 @@ let lspred2smt2 pred args =
     match pred with
     | Eql -> "(= %s)"
     | Neql -> "(not (= %s))"
+    | Len -> "(Length %s)"
+    | NLen -> "(not (Length %s))"
   end args
 
 let rec arith2smt2 = 
@@ -85,8 +87,10 @@ let pred2smt2 (p, l) =
   let args = ariths2smt2 l in
   pred2smt2 p args
 
-let lspred2smt2 (p, l) =
-  let args = lsariths2smt2 l in
+let lspred2smt2 (p, a, l) =
+  let arga = ariths2smt2 a in
+  let argl = lsariths2smt2 l in
+  let args = arga ^ " " ^ argl in
   lspred2smt2 p args
 
 let rec ref2smt2 rt = match rt with
@@ -96,7 +100,7 @@ let rec ref2smt2 rt = match rt with
   | ROr(x, y) -> Printf.sprintf "(or %s %s)" (ref2smt2 x) (ref2smt2 y)
   | RTemplate(p, l, ls) -> template2smt2 (p, l, ls)
   | RPred(p, l) -> pred2smt2(p, l)
-  | RLsPred(p, l) -> lspred2smt2(p, l)
+  | RLsPred(p, a, l) -> lspred2smt2(p, a, l)
   | RExists _ -> assert false
 
 let rec fpl2smt2 fml = 
@@ -127,7 +131,7 @@ let rec formula2smt2 fml =
     | false -> "false"
   end
   | Formula.Pred (p, l) -> pred2smt2 (p, l)
-  | Formula.LsPred(p, l) -> lspred2smt2 (p, l)
+  | Formula.LsPred(p, a, l) -> lspred2smt2 (p, a, l)
   
 (*  Rid.M.t *)
 let pred_concrete_def ((name, (fml, args)) : (int * (('a, [`Int] Id.t, _) Hflmc2_syntax.Formula.gen_t * [`Int] Id.t list))) =

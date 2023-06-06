@@ -233,8 +233,8 @@ module Subst = struct
             LsArith (ls_arith s_env a)
           | Pred (p,as')   ->
             Pred(p, List.map ~f:(arith s_env) as')
-          | LsPred (p,as')   ->
-            LsPred(p, List.map ~f:(ls_arith s_env) as')
+          | LsPred (p,as',ls')   ->
+            LsPred(p,List.map ~f:(arith s_env) as', List.map ~f:(ls_arith s_env) ls')
           | Bool _         -> phi
         in
         hflz_ env_ IdSet.empty phi

@@ -148,7 +148,7 @@ let rec infer_formula track formula env m ints lists =
     in 
     RBool(ROr(rx, ry)), m'
   | LsArith x -> (RList (RLsArith x), m)
-  | LsPred (f, args) -> (RBool(RLsPred(f, args)), m)
+  | LsPred (f, arga, argl) -> (RBool(RLsPred(f, arga, argl)), m)
   | And (x, y, t1, t2) -> 
     let (x', mx) = infer_formula track x env m ints lists in
     let (y', m') = infer_formula track y env mx ints lists in
@@ -248,8 +248,8 @@ let formula_to_refinement fml =
       g fs
     | Pred (p, as') ->
       RPred (p, as')
-    | LsPred (p, as') ->
-      RLsPred (p, as')
+    | LsPred (p, as', ls') ->
+      RLsPred (p, as', ls')
   in
   go fml
   

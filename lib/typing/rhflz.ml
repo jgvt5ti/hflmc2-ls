@@ -16,7 +16,7 @@ type t =
   | Arith  of Arith.t
   | LsArith of Arith.lt
   | Pred   of Formula.pred * Arith.t list
-  | LsPred of Formula.ls_pred * Arith.lt list
+  | LsPred of Formula.ls_pred * Arith.t list * Arith.lt list
 
 let rec print_formula = function
   | Bool x when x -> Printf.printf "tt"
@@ -69,7 +69,7 @@ let rec print_formula = function
     Print.pred Fmt.stdout x;
     Print.arith Fmt.stdout f2;
     Fmt.flush Fmt.stdout () ;
-  | LsPred (x,[f1; f2]) -> 
+  | LsPred (x, [], [f1; f2]) -> 
     Print.ls_arith Fmt.stdout f1;
     Print.ls_pred Fmt.stdout x;
     Print.ls_arith Fmt.stdout f2;
@@ -77,7 +77,7 @@ let rec print_formula = function
   | Pred (x,_) -> 
     Print.pred Fmt.stdout x;
     Fmt.flush Fmt.stdout ()
-  | LsPred (x,_) -> 
+  | LsPred (x,_, _) -> 
     Print.ls_pred Fmt.stdout x;
     Fmt.flush Fmt.stdout () 
 
@@ -93,7 +93,7 @@ let rec negate p = match p with
   | And(x, y, t1, t2) -> Or(negate x, negate y, t1, t2)
   | Bool x -> Bool (not x)
   | Pred(p, l) -> Pred(Formula.negate_pred p, l)
-  | LsPred(p, l) -> LsPred(Formula.negate_ls_pred p, l)
+  | LsPred(p, a, l) -> LsPred(Formula.negate_ls_pred p, a, l)
 let rec translate_if hflz = match hflz with
   | Or(And(a, b, s1, s2), And(a', b', s1',s2'), t1, t2) ->
     let fa = is_simple a in

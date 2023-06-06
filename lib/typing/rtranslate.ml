@@ -55,7 +55,7 @@ let rec translate_body env body =
   | Hflz.Arith x -> Arith x
   | Hflz.LsArith x -> LsArith x
   | Hflz.Pred (x, y) -> Pred (x, y)
-  | Hflz.LsPred (x, y) -> LsPred (x, y)
+  | Hflz.LsPred (x, y, z) -> LsPred (x, y, z)
   
 let translate_rule
   (formula: Type.simple_ty Hflz.hes_rule)

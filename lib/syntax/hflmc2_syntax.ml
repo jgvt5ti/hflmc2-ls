@@ -57,6 +57,8 @@ end = struct
             | I.T_OR        -> "OR"
             | I.T_NEQ       -> "NEQ"
             | I.T_NEQL      -> "NEQL"
+            | I.T_LENGTH    -> "LENGTH"
+            | I.T_NEGLENGTH -> "NEGLENGTH"
             | I.T_NEG       -> "NEG"
             | I.T_MINUS     -> "MINUS"
             | I.T_LSQUARE   -> "LSQUARE"
