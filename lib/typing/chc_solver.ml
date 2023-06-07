@@ -94,12 +94,23 @@ let selected_cex_cmd = function
     [|"eld"; "-cex";  "-hsmt"|]
   | _ -> failwith "you cannot use this"
 
+let prologue_hoice = "(declare-fun Length (Int (List Int)) Bool)
+(assert (forall ((ls (List Int))) (=> (= ls nil) (Length 0 ls))))
+(assert (forall ((n Int)(hd Int)(tl (List Int))) (=> (Length n tl) (Length (+ 1 n) (insert hd tl)))))
+"
+
 let prologue = "(set-logic HORN)
 (declare-datatypes ((List 0)) (((insert (head Int) (tail List)) (nil))))
 (declare-fun Length (Int List) Bool)
 (assert (forall ((ls List)) (=> (= ls nil) (Length 0 ls))))
 (assert (forall ((n Int)(hd Int)(tl List)) (=> (Length n tl) (Length (+ 1 n) (insert hd tl)))))
 "
+
+let get_prologue =
+  function
+  | `Hoice -> prologue_hoice
+  | _ -> prologue
+
 
 let get_epilogue = 
   function 
@@ -177,7 +188,7 @@ let collect_vars chc =
 let gen_assert solver chc =
   let (avars, lvars) = collect_vars chc in
   let vars_s = avars |> IdSet.to_list |> List.map var_def |> List.fold_left (^) "" in
-  let lvars_s = lvars |> IdSet.to_list |> List.map lvar_def |> List.fold_left (^) "" in
+  let lvars_s = lvars |> IdSet.to_list |> List.map (lvar_def solver) |> List.fold_left (^) "" in
   let vars_s = vars_s ^ lvars_s in
   let body = ref2smt2 chc.body in
   let head = ref2smt2 chc.head in
@@ -198,10 +209,10 @@ let chc2smt2 env chcs solver =
         | None -> true
       )
       preds in
-  let def = preds |> Rid.M.bindings |> List.map pred_def |> List.fold_left (^) "" in
+  let def = preds |> Rid.M.bindings |> List.map (pred_def solver) |> List.fold_left (^) "" in
   let concrete_def = env |> Rid.M.bindings |> List.map pred_concrete_def |> List.fold_left (^) "" in
   let body = chcs |> List.map (gen_assert solver) |> List.fold_left (^) "" in
-  prologue ^ def ^ concrete_def ^ body ^ (get_epilogue solver)
+  (get_prologue solver) ^ def ^ concrete_def ^ body ^ (get_epilogue solver)
 
 
 let parse_model model = 
@@ -254,6 +265,7 @@ let parse_model model =
   in
   let rec parse_list = function
     | Atom "nil" -> Arith.Nil
+    | Atom v0 -> Arith.mk_lvar (mk_lvar v0)
     | List [Atom "insert"; hd; tl] ->
         let head = parse_arith hd in
         let tail = parse_list tl in
@@ -320,8 +332,13 @@ let parse_model model =
   match Sexplib.Sexp.parse model with
   | Done(model, _) -> begin 
     match model with
-    | List (Atom "model" :: _ :: sol) -> (* Eliminate the definition of Length *)
-        Ok(List.map ~f:parse_def sol)
+    | List (Atom "model" :: sol) -> (* Eliminate the definition of Length *)
+        let defs = List.filter sol ~f:begin
+      fun x -> match x with
+        List [Atom "define-fun"; Atom "Length"; _] -> false
+        | _ -> true
+      end in
+        Ok(List.map ~f:parse_def defs)
     | _ -> Error "parse_model" 
     end
   | _ -> Error "failed to parse model"

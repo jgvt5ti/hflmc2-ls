@@ -7,17 +7,23 @@ let rec gen_len_args len =
   else if len = 1 then "Int"
   else "Int " ^ gen_len_args (len - 1)
 
-let rec gen_len_ls_args len = 
+let rec gen_len_ls_args solver len = 
+  let tystr = match solver with
+  | `Hoice -> "(List Int) "
+  | _ -> "List " in
   if len < 1 then ""
-  else if len = 1 then "List"
-  else "List " ^ gen_len_ls_args (len - 1)
+  else if len = 1 then tystr
+  else tystr ^ gen_len_ls_args solver (len - 1)
 
-let pred_def (name, (len1, len2)) =
-  gen_len_args len1 ^ " " ^ gen_len_ls_args len2 |> Printf.sprintf "(declare-fun %s (%s) Bool)\n" (Rid.to_string name)
+let pred_def solver (name, (len1, len2)) =
+  gen_len_args len1 ^ " " ^ gen_len_ls_args solver len2 |> Printf.sprintf "(declare-fun %s (%s) Bool)\n" (Rid.to_string name)
 
 
 let var_def id = id |> Id.to_string |> Printf.sprintf "(%s Int)"
-let lvar_def id = id |> Id.to_string |> Printf.sprintf "(%s List)"
+let lvar_def solver id = 
+  match solver with
+  | `Hoice -> id |> Id.to_string |> Printf.sprintf "(%s (List Int))"
+  | _ -> id |> Id.to_string |> Printf.sprintf "(%s List)"
 
 let op2smt2 = 
   let open Arith in
