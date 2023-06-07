@@ -1,5 +1,5 @@
 %HES
-S =v ∀n.∀ls. (nlen n ls) \/ G ls A (n + 1).
+S =v ∀n.∀ls. (nlen n ls) \/ G ls A n.
 A n =v true.
 G ls k u =v u > 0 /\ ∀hd.∀tl. (ls <>l [] \/ k 0) /\
 (ls <>l (hd :: tl) \/

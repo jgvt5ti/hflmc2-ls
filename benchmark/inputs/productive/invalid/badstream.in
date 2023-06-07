@@ -1,4 +1,4 @@
 %HES
-S =v ∀n.∀ls. (nlen n ls) \/ G ls A (n + 1).
+S =v ∀n.∀ls. (nlen n ls) \/ G ls A n.
 A n =v true.
 G ls k u =v u > 0 /\ G ls A (u - 1).
