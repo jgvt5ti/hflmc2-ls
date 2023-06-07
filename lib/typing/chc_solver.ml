@@ -102,8 +102,8 @@ let prologue_hoice = "(declare-fun Length (Int (List Int)) Bool)
 let prologue = "(set-logic HORN)
 (declare-datatypes ((List 0)) (((insert (head Int) (tail List)) (nil))))
 (declare-fun Length (Int List) Bool)
-(assert (forall ((ls List)) (=> (= ls nil) (Length 0 ls))))
-(assert (forall ((n Int)(hd Int)(tl List)) (=> (Length n tl) (Length (+ 1 n) (insert hd tl)))))
+(assert (forall ((n Int)(ls List)) (=> (= n (_size ls) ) (Length n ls))))
+(assert (forall ((n Int)(ls List)) (=> (Length n ls) (= n (_size ls) ))))
 "
 
 let get_prologue =
