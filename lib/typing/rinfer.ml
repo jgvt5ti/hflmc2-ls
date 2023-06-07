@@ -253,7 +253,7 @@ let formula_to_refinement fml =
   in
   go fml
   
-let print_derived_refinement_type is_dual_chc (anno_env : (('a, [ `Int ] Id.t, _) Formula.gen_t * [ `Int ] Id.t list) Rid.M.t) hes constraints = 
+let print_derived_refinement_type is_dual_chc (*anno_env*) hes (constraints: (int * [`Int | `List] Id.t list * refinement) list) = 
   let rec gen_name_type_map constraints m = match constraints with
     | [] -> m
     | (id, args, body)::xs -> 
@@ -262,7 +262,7 @@ let print_derived_refinement_type is_dual_chc (anno_env : (('a, [ `Int ] Id.t, _
   let m =
     gen_name_type_map constraints Rid.M.empty
     |> Rid.M.map (fun (args, fml) -> args, if is_dual_chc then Rtype.dual fml else fml) in
-  let m' =
+  (*  let m' =
     Rid.M.map
       (fun (fml, args) ->
         (args, formula_to_refinement fml)
@@ -278,25 +278,41 @@ let print_derived_refinement_type is_dual_chc (anno_env : (('a, [ `Int ] Id.t, _
         | None, None -> assert false
       )
       m
-      m' in
+      m' in *)
   let rec subst_ids map t = 
     match map with 
     | [] -> t
     | (src, dst):: xs -> 
       t |> subst_refinement src (RIntP(RArith(dst))) |> subst_ids xs
   in
+  let rec subst_lids map t = 
+    match map with 
+    | [] -> t
+    | (src, dst):: xs -> 
+      t |> subst_refinement src (RListP(RLsArith(dst))) |> subst_lids xs
+  in
   let rec zip l r = match (l, r) with 
     | [], [] -> []
-    | [], _ | _ , [] -> failwith "program error(print_derived_refinement_type)"
+    | [], _ | _ , [] -> [] (* failwith "program error(print_derived_refinement_type)" *)
     | x::xs, y::ys -> (x, y)::zip xs ys
+  in
+  let rec split_nth ls n =
+    if n <= 0 || ls = [] then ([], ls)
+    else
+      let (a, b) = split_nth (List.tl ls) (n - 1) in
+      (List.hd ls :: a, b)
   in
   let rec translate_ty = function 
     | RArrow (x, y) -> RArrow(translate_ty x, translate_ty y)
-    | RBool(RTemplate(p, l, _)) -> 
+    | RBool(RTemplate(p, l, ls)) -> 
       let (args, body) = Rid.M.find p m in
-      let map = zip args l in
-      let body' = subst_ids map body in
-      RBool(body')
+      let len_arga = List.length l in
+      let (arga, argl) = split_nth args len_arga in
+      let map = zip arga l in
+      let map2 = zip argl ls in
+      let body = subst_ids map body in
+      let body = subst_lids map2 body in
+      RBool(body)
     | x -> x
   in
   let rec inner = 
@@ -481,7 +497,7 @@ let rec infer anno_env hes env top =
         match x with 
         | Ok(x) -> 
           let open Hflmc2_options in
-          let hes = print_derived_refinement_type is_dual_chc anno_env hes x in
+          let hes = print_derived_refinement_type is_dual_chc hes x in
           if !Typing.show_refinement then
             print_hes hes
           else 

@@ -94,8 +94,6 @@ let selected_cex_cmd = function
     [|"eld"; "-cex";  "-hsmt"|]
   | _ -> failwith "you cannot use this"
 
-(*(define-fun-rec length ((ls (List Int))) Int
-   (ite (= nil ls) 0 (+ 1 (length (tail ls)))))*)
 let prologue = "(set-logic HORN)
 (declare-datatypes ((List 0)) (((insert (head Int) (tail List)) (nil))))
 (declare-fun Length (Int List) Bool)
@@ -214,10 +212,12 @@ let parse_model model =
   let open Sexp in
   let fail f s = invalid_arg @@ f ^ ": " ^ Sexp.to_string s in
   let mk_var name =
-     Id.{ name; id=0; ty=`Int }
-  in
+     Id.{ name; id=0; ty=`Int } in
+  let mk_lvar name =
+     Id.{ name; id=0; ty=`List } in
   let parse_arg = function
     | List [Atom v; Atom "Int" ] -> mk_var v
+    | List [Atom v; List [Atom "List"; Atom "Int"]] -> mk_lvar v 
     | s -> fail "parse_arg" s
   in
   let rec parse_arith = function
@@ -252,6 +252,14 @@ let parse_model model =
             end
     | s -> fail "parse_arith" s
   in
+  let rec parse_list = function
+    | Atom "nil" -> Arith.Nil
+    | List [Atom "insert"; hd; tl] ->
+        let head = parse_arith hd in
+        let tail = parse_list tl in
+        Arith.Cons (head, tail)
+    | s -> fail "parse_list" s
+  in
   let rec parse_formula = function
     | Atom "true"  -> RTrue
     | Atom "false" -> RFalse
@@ -270,6 +278,10 @@ let parse_model model =
           | s     -> fail "parse_formula:list" (Atom s)
         in
         begin match a with
+        | `Pred Formula.Eq ->
+            let a = try RPred (Formula.Eq, (List.map ~f:parse_arith ss)) with
+            | _ -> RLsPred (Formula.Eql, [], (List.map ~f:parse_list ss)) in
+            a
         | `Pred pred ->
             RPred (pred, (List.map ~f:parse_arith ss))
         | `And ->
@@ -308,7 +320,7 @@ let parse_model model =
   match Sexplib.Sexp.parse model with
   | Done(model, _) -> begin 
     match model with
-    | List (Atom "model" :: sol) ->
+    | List (Atom "model" :: _ :: sol) -> (* Eliminate the definition of Length *)
         Ok(List.map ~f:parse_def sol)
     | _ -> Error "parse_model" 
     end
