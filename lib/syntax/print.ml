@@ -135,7 +135,7 @@ let rec gen_ls_arith_ : 'var t_with_prec -> ('avar, 'lvar) Arith.gen_lt t_with_p
       show_paren (prec > op_prec) ppf "@[<1>%a@ %a@ %a@]"
           (gen_arith_ avar_ prec_l) hd
           cons ()
-          (gen_ls_arith_ avar_ prec_l) tl
+          (gen_ls_arith_ avar_ prec_r) tl
 let gen_ls_arith : 'var t_with_prec -> ('avar, 'lvar) Arith.gen_lt t =
   fun avar_ ppf a -> gen_ls_arith_ avar_ Prec.zero ppf a
 let ls_arith_ : Prec.t -> Arith.lt Fmt.t =
