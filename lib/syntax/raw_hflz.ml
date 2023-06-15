@@ -11,7 +11,7 @@ type raw_hflz =
   | Cons of raw_hflz * raw_hflz
   | Op   of Arith.op * raw_hflz list
   | Pred of Formula.pred * raw_hflz list
-  | LsPred of Formula.ls_pred * raw_hflz list * raw_hflz list
+  | Size of raw_hflz
   | Forall of string * raw_hflz
   [@@deriving eq,ord,show,iter,map,fold,sexp]
 type hes_rule =
@@ -27,6 +27,7 @@ type hes = hes_rule list
 let mk_int n     = Int(n)
 let mk_nil = Nil
 let mk_cons hd tl = Cons (hd, tl)
+let mk_size ls = Size ls
 let mk_bool b    = Bool b
 let mk_var x     = Var x
 let mk_op op as' = Op(op,as')
@@ -40,9 +41,9 @@ let mk_ors = function
   | [] -> Bool false
   | x::xs -> List.fold_left xs ~init:x ~f:(fun a b -> Or(a,b))
 
-let mk_pred pred a1 a2 = Pred(pred, [a1;a2])
-let mk_lspred pred a1 a2 = LsPred(pred, [], [a1;a2])
-let mk_sizepred pred as' ls' = LsPred (pred, [as'], [ls'])
+let mk_pred pred a1 a2 = Pred(pred, [a1;a2], [])
+let mk_lspred pred a1 a2 = Pred(pred, [], [a1;a2])
+
 let mk_app t1 t2 = App(t1,t2)
 let mk_apps t ts = List.fold_left ts ~init:t ~f:mk_app
 
@@ -224,10 +225,10 @@ module Typing = struct
         | Op (op, as') -> Op (op, List.map ~f:(self#arith id_env) as')
         | _ -> failwith "annot.arith"
 
-    method ls_arith : id_env -> raw_hflz -> Arith.lt =
+    method lsexpr : id_env -> raw_hflz -> Arith.lt =
       fun id_env ls -> match ls with
         | Nil -> Arith.mk_nil
-        | Cons (hd, tl) -> Arith.mk_cons (self#arith id_env hd) (self#ls_arith id_env tl)
+        | Cons (hd, tl) -> Arith.mk_cons (self#arith id_env hd) (self#lsexpr id_env tl)
         | Var name ->
             let x =
               match
@@ -242,7 +243,7 @@ module Typing = struct
                   Id.{ name; id; ty=`List }
             in
             self#add_ty_env x TvList; Arith.mk_lvar x
-        | _ -> failwith "annot.ls_arith"
+        | _ -> failwith "annot.lsexpr"
 
     method term : id_env -> raw_hflz -> tyvar -> unit Hflz.t =
       fun id_env psi tv ->
@@ -288,13 +289,13 @@ module Typing = struct
             Pred(pred, List.map ~f:(self#arith id_env) as')
         | LsPred (pred,as',ls') ->
             unify tv TvBool;
-            LsPred(pred, List.map ~f:(self#arith id_env) as', List.map ~f:(self#ls_arith id_env) ls')
+            LsPred(pred, List.map ~f:(self#arith id_env) as', List.map ~f:(self#lsexpr id_env) ls')
         | Int _ | Op _ ->
             unify tv TvInt;
             Arith (self#arith id_env psi)
         | Nil | Cons _ ->
             unify tv TvList;
-            LsArith (self#ls_arith id_env psi)
+            LsExpr (self#lsexpr id_env psi)
         | Abs(name, psi) ->
             let id = new_id() in
             let x = Id.{ name; id; ty = () } in
@@ -411,7 +412,7 @@ module Typing = struct
           begin match self#id x with
           | x -> Var x
           | exception IntType -> Arith (Arith.mk_var x)
-          | exception ListType -> LsArith (Arith.mk_lvar x)
+          | exception ListType -> LsExpr (Arith.mk_lvar x)
           end
       | Bool b           -> Bool b
       | Or  (psi1,psi2)  -> Or  (self#term psi1, self#term psi2)
@@ -420,7 +421,7 @@ module Typing = struct
       | Abs (x, psi)     -> Abs (self#arg_id x, self#term psi)
       | Forall(x, psi)   -> Forall (self#arg_id x, self#term psi)
       | Arith a          -> Arith a
-      | LsArith a        -> LsArith a
+      | LsExpr a        -> LsExpr a
       | Pred (pred,as')  -> Pred(pred, as')
       | LsPred (pred,as',ls')-> LsPred(pred, as',ls')
 
@@ -505,7 +506,7 @@ let rename_ty_body : simple_ty Hflz.hes -> simple_ty Hflz.hes =
         | And (psi1, psi2) -> And (term env psi1, term env psi2)
         | App (psi1, psi2) -> App (term env psi1, term env psi2)
         | Arith a          -> Arith a
-        | LsArith a          -> LsArith a
+        | LsExpr a          -> LsExpr a
         | Pred (pred, as') -> Pred (pred, as')
         | LsPred (pred, as', ls') -> LsPred (pred, as', ls')
         | Abs ({ty=TySigma ty;_} as x, psi) ->
