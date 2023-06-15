@@ -57,8 +57,6 @@ end = struct
             | I.T_OR        -> "OR"
             | I.T_NEQ       -> "NEQ"
             | I.T_NEQL      -> "NEQL"
-            | I.T_LENGTH    -> "LENGTH"
-            | I.T_NEGLENGTH -> "NEGLENGTH"
             | I.T_NEG       -> "NEG"
             | I.T_MINUS     -> "MINUS"
             | I.T_LSQUARE   -> "LSQUARE"
@@ -88,6 +86,7 @@ end = struct
             | I.T_PERCENT   -> "PERCENT"
             | I.T_NIL       -> "NIL"
             | I.T_CONS       -> "CONS"
+            | I.T_SIZE       -> "SIZE"
             end
         | I.X (I.N x) -> print @@ begin match x with
             | I.N_uvar                     -> "uvar"

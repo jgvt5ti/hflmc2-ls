@@ -85,7 +85,7 @@ let selected_cmd timeout = function
   | `Spacer -> call_template [|!Hflmc2_options.z3_path; "fp.engine=spacer"|] timeout
   | `Hoice -> call_template [|"hoice"; "--z3"; !Hflmc2_options.z3_path|] timeout
   | `Fptprove -> call_fptprove timeout  
-  | `Eldarica -> call_template [|"eld"; "-ssol"|] timeout
+  | `Eldarica -> call_template [|"eld"|] timeout
   | `Liu -> call_liu_solver timeout
   | _ -> failwith "you cannot use this"
   
@@ -101,9 +101,6 @@ let prologue_hoice = "(declare-fun Length (Int (List Int)) Bool)
 
 let prologue = "(set-logic HORN)
 (declare-datatypes ((List 0)) (((insert (head Int) (tail List)) (nil))))
-(declare-fun Length (Int List) Bool)
-(assert (forall ((n Int)(ls List)) (=> (= n (_size ls) ) (Length n ls))))
-(assert (forall ((n Int)(ls List)) (=> (Length n ls) (= n (_size ls) ))))
 "
 
 let get_prologue =
@@ -146,36 +143,31 @@ let rec collect_preds chcs m =
     m |> inner chc.body |> inner chc.head |> collect_preds chcs
 
 let collect_vars chc = 
-  let collect_from_arith a m =
-    let fvs = Arith.fvs a in
-    List.fold_left IdSet.add m fvs
+  let collect_from_arith a m1 m2 =
+    let (afvs, lfvs) = Arith.fvs a in
+    (List.fold_left IdSet.add m1 afvs, List.fold_left IdSet.add m2 lfvs)
   in
-  let rec collect_from_ariths ars m = match ars with
-    | [] -> m
+  let rec collect_from_ariths ars m1 m2 = match ars with
+    | [] -> (m1, m2)
     | x::xs -> 
-      m |> collect_from_arith x |> collect_from_ariths xs
+      let (set1, set2) = collect_from_arith x m1 m2 in
+      collect_from_ariths xs set1 set2
   in
-  let collect_from_ls_arith a m1 m2 =
+  let collect_from_lsexpr a m1 m2 =
     let (afvs, lfvs) = Arith.lfvs a in
     (List.fold_left IdSet.add m1 afvs, List.fold_left IdSet.add m2 lfvs)
   in
-  let rec collect_from_ls_ariths ars m1 m2 = match ars with
+  let rec collect_from_lsexprs ars m1 m2 = match ars with
     | [] -> (m1, m2)
     | x::xs ->
-      let (set1, set2) = collect_from_ls_arith x m1 m2 in
-      collect_from_ls_ariths xs set1 set2
+      let (set1, set2) = collect_from_lsexpr x m1 m2 in
+      collect_from_lsexprs xs set1 set2
   in
   let rec inner rt m1 m2 = match rt with
-  | RTemplate(_, l, ls) -> 
-    let avar1 = collect_from_ariths l m1 in
-    let (avar2, lvar) = collect_from_ls_ariths ls m1 m2 in
-    (IdSet.union avar1 avar2, lvar)
-  | RPred(_, l) ->
-    collect_from_ariths l m1, m2
-  | RLsPred(_, l, ls) ->
-    let (avar, _) = collect_from_ariths l m1, m2 in
-    let (_, lvar) = collect_from_ls_ariths ls m1 m2 in
-    (avar, lvar)
+  | RTemplate(_, l, ls) | RPred(_, l, ls) -> 
+    let (avar1, lvar1) = collect_from_ariths l m1 m2 in
+    let (avar2, lvar2) = collect_from_lsexprs ls m1 m2 in
+    (IdSet.union avar1 avar2, IdSet.union lvar1 lvar2)
   | RAnd(x, y) | ROr(x, y) ->
     let (m1, m2) = inner x m1 m2 in
     inner y m1 m2
@@ -291,11 +283,11 @@ let parse_model model =
         in
         begin match a with
         | `Pred Formula.Eq ->
-            let a = try RPred (Formula.Eq, (List.map ~f:parse_arith ss)) with
-            | _ -> RLsPred (Formula.Eql, [], (List.map ~f:parse_list ss)) in
+            let a = try RPred (Formula.Eq, (List.map ~f:parse_arith ss),[]) with
+            | _ -> RPred (Formula.Eql, [], (List.map ~f:parse_list ss)) in
             a
         | `Pred pred ->
-            RPred (pred, (List.map ~f:parse_arith ss))
+            RPred (pred, (List.map ~f:parse_arith ss), (List.map ~f:parse_list ss))
         | `And ->
             let  [@warning "-8"] a::as' = List.map ss ~f:parse_formula in
             List.fold_left ~init:a as' ~f:(fun x y -> RAnd(x, y))

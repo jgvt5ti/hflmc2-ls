@@ -10,7 +10,7 @@ type raw_hflz =
   | Nil
   | Cons of raw_hflz * raw_hflz
   | Op   of Arith.op * raw_hflz list
-  | Pred of Formula.pred * raw_hflz list
+  | Pred of Formula.pred * raw_hflz list * raw_hflz list
   | Size of raw_hflz
   | Forall of string * raw_hflz
   [@@deriving eq,ord,show,iter,map,fold,sexp]
@@ -223,6 +223,7 @@ module Typing = struct
             in
             self#add_ty_env x TvInt; Arith.mk_var x
         | Op (op, as') -> Op (op, List.map ~f:(self#arith id_env) as')
+        | Size ls -> Size (self#lsexpr id_env ls)
         | _ -> failwith "annot.arith"
 
     method lsexpr : id_env -> raw_hflz -> Arith.lt =
@@ -284,13 +285,10 @@ module Typing = struct
             let psi2 = self#term id_env psi2 TvBool in
             unify tv TvBool;
             And (psi1,psi2)
-        | Pred (pred,as') ->
+        | Pred (pred,as',ls') ->
             unify tv TvBool;
-            Pred(pred, List.map ~f:(self#arith id_env) as')
-        | LsPred (pred,as',ls') ->
-            unify tv TvBool;
-            LsPred(pred, List.map ~f:(self#arith id_env) as', List.map ~f:(self#lsexpr id_env) ls')
-        | Int _ | Op _ ->
+            Pred(pred, List.map ~f:(self#arith id_env) as', List.map ~f:(self#lsexpr id_env) ls')
+        | Int _ | Op _ | Size _->
             unify tv TvInt;
             Arith (self#arith id_env psi)
         | Nil | Cons _ ->
@@ -422,8 +420,7 @@ module Typing = struct
       | Forall(x, psi)   -> Forall (self#arg_id x, self#term psi)
       | Arith a          -> Arith a
       | LsExpr a        -> LsExpr a
-      | Pred (pred,as')  -> Pred(pred, as')
-      | LsPred (pred,as',ls')-> LsPred(pred, as',ls')
+      | Pred (pred,as',ls')-> Pred(pred, as',ls')
 
     method hes_rule : unit Hflz.hes_rule -> simple_ty Hflz.hes_rule =
       fun rule ->
@@ -507,8 +504,7 @@ let rename_ty_body : simple_ty Hflz.hes -> simple_ty Hflz.hes =
         | App (psi1, psi2) -> App (term env psi1, term env psi2)
         | Arith a          -> Arith a
         | LsExpr a          -> LsExpr a
-        | Pred (pred, as') -> Pred (pred, as')
-        | LsPred (pred, as', ls') -> LsPred (pred, as', ls')
+        | Pred (pred, as', ls') -> Pred (pred, as', ls')
         | Abs ({ty=TySigma ty;_} as x, psi) ->
             Abs(x, term (IdMap.add env x ty) psi)
         | Abs (x, psi) -> Abs(x, term env psi)

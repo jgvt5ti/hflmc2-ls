@@ -137,7 +137,6 @@ let rec infer_formula track formula env m ints lists =
     let template = (RBool(RTemplate template)) in
     let l'' = subtype body_t template l in
     (template, l'')
-  | Pred (f, args) -> (RBool(RPred(f, args)), m)
   | Arith x -> (RInt (RArith x), m)
   | Or (x, y, _, _) ->
     let (x', mx) = infer_formula track x env m ints lists in
@@ -147,8 +146,8 @@ let rec infer_formula track formula env m ints lists =
       | _ -> failwith "type is not correct"
     in 
     RBool(ROr(rx, ry)), m'
-  | LsArith x -> (RList (RLsArith x), m)
-  | LsPred (f, arga, argl) -> (RBool(RLsPred(f, arga, argl)), m)
+  | LsExpr x -> (RList (RLsExpr x), m)
+  | Pred (f, arga, argl) -> (RBool(RPred(f, arga, argl)), m)
   | And (x, y, t1, t2) -> 
     let (x', mx) = infer_formula track x env m ints lists in
     let (y', m') = infer_formula track y env mx ints lists in
@@ -246,10 +245,8 @@ let formula_to_refinement fml =
         | [] -> assert false
       in
       g fs
-    | Pred (p, as') ->
-      RPred (p, as')
-    | LsPred (p, as', ls') ->
-      RLsPred (p, as', ls')
+    | Pred (p, as', ls') ->
+      RPred (p, as', ls')
   in
   go fml
   
@@ -289,7 +286,7 @@ let print_derived_refinement_type is_dual_chc (*anno_env*) hes (constraints: (in
     match map with 
     | [] -> t
     | (src, dst):: xs -> 
-      t |> subst_refinement src (RListP(RLsArith(dst))) |> subst_lids xs
+      t |> subst_refinement src (RListP(RLsExpr(dst))) |> subst_lids xs
   in
   let rec zip l r = match (l, r) with 
     | [], [] -> []

@@ -94,4 +94,5 @@ let rec evaluate_opt x = match x with
   List.fold ~init:(evaluate_opt x) ~f:(lift @@ op_func op) (List.map ~f:evaluate_opt xs)
   | Var _ -> None
   | Int(x) -> Some(x)
+  | Size _ -> None
   | _ -> failwith "evaluation error"

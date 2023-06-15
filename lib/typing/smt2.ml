@@ -44,17 +44,8 @@ let pred2smt2 pred args =
     | Ge -> "(>= %s)"
     | Lt -> "(< %s)"
     | Gt -> "(> %s)"
-  end args
-
-let lspred2smt2 pred args = 
-  let open Formula in
-  Printf.sprintf 
-  begin
-    match pred with
     | Eql -> "(= %s)"
     | Neql -> "(not (= %s))"
-    | Len -> "(Length %s)"
-    | NLen -> "(not (Length %s))"
   end args
 
 let rec arith2smt2 = 
@@ -66,38 +57,35 @@ let rec arith2smt2 =
     let args = ariths2smt2 l in
     let op_s = op2smt2 op in
     Printf.sprintf "(%s %s)" op_s args
+  | Size ls -> Printf.sprintf "(_size %s)" (lsexpr2smt2 ls)
 and ariths2smt2 l =
     l |> List.map arith2smt2 |> List.fold_left (fun s x -> s ^ " " ^ x) "" 
 
-let rec lsarith2smt2 = 
+and lsexpr2smt2 = 
   let open Arith in
   function 
   | Nil -> Printf.sprintf "nil"
   | LVar id -> Id.to_string id
   | Cons(hd, tl) -> 
     let head = arith2smt2 hd in
-    let tail = lsarith2smt2 tl in
+    let tail = lsexpr2smt2 tl in
     Printf.sprintf "(insert %s %s)" head tail
-and lsariths2smt2 l =
-    l |> List.map lsarith2smt2 |> List.fold_left (fun s x -> s ^ " " ^ x) "" 
+and lsexprs2smt2 l =
+    l |> List.map lsexpr2smt2 |> List.fold_left (fun s x -> s ^ " " ^ x) "" 
 let template2smt2 (p, l, ls) =
   let name = Rid.to_string p in
   let args = ariths2smt2 l in
-  let lsargs = lsariths2smt2 ls in
+  let lsargs = lsexprs2smt2 ls in
     if args = "" && lsargs = "" then
       Printf.sprintf "%s" name 
     else
       Printf.sprintf "(%s %s %s)" name args lsargs
 
-let pred2smt2 (p, l) =
-  let args = ariths2smt2 l in
-  pred2smt2 p args
-
-let lspred2smt2 (p, a, l) =
+let pred2smt2 (p, a, l) =
   let arga = ariths2smt2 a in
-  let argl = lsariths2smt2 l in
+  let argl = lsexprs2smt2 l in
   let args = arga ^ " " ^ argl in
-  lspred2smt2 p args
+  pred2smt2 p args
 
 let rec ref2smt2 rt = match rt with
   | RTrue -> "true"
@@ -105,8 +93,7 @@ let rec ref2smt2 rt = match rt with
   | RAnd(x, y) -> Printf.sprintf "(and %s %s)" (ref2smt2 x) (ref2smt2 y)
   | ROr(x, y) -> Printf.sprintf "(or %s %s)" (ref2smt2 x) (ref2smt2 y)
   | RTemplate(p, l, ls) -> template2smt2 (p, l, ls)
-  | RPred(p, l) -> pred2smt2(p, l)
-  | RLsPred(p, a, l) -> lspred2smt2(p, a, l)
+  | RPred(p, a, l) -> pred2smt2(p, a, l)
   | RExists _ -> assert false
 
 let rec fpl2smt2 fml = 
@@ -118,7 +105,7 @@ let rec fpl2smt2 fml =
   | And(x, y) -> Printf.sprintf "(and %s %s)" (fpl2smt2 x) (fpl2smt2 y)
   | Forall(x, y) -> 
     Printf.sprintf "(forall ((%s Int)) %s)" (Id.to_string x) (fpl2smt2 y)
-  | Pred(p, l) -> pred2smt2(p, l)
+  | Pred(p, l) -> pred2smt2(p, l, [])
 
 
   (* (define-fun X2
@@ -136,8 +123,7 @@ let rec formula2smt2 fml =
     | true -> "true"
     | false -> "false"
   end
-  | Formula.Pred (p, l) -> pred2smt2 (p, l)
-  | Formula.LsPred(p, a, l) -> lspred2smt2 (p, a, l)
+  | Formula.Pred(p, a, l) -> pred2smt2 (p, a, l)
   
 (*  Rid.M.t *)
 let pred_concrete_def ((name, (fml, args)) : (int * (('a, [`Int] Id.t, _) Hflmc2_syntax.Formula.gen_t * [`Int] Id.t list))) =

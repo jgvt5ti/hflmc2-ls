@@ -52,8 +52,8 @@ let rec subst_fml env fml =
   | Var  _ -> assert false
   | Or  fs -> Or  (List.map (subst_fml env) fs)
   | And fs -> And (List.map (subst_fml env) fs)
-  | Pred (p, as') ->
-    Pred (p, List.map (subst_arith env) as')
+  | Pred (p, as', ls') ->
+    Pred (p, List.map (subst_arith env) as', ls')
 
 let generate_anno_env_ty (aty: Hflmc2_syntax.Type.abstraction_ty) (rty: Rtype.t) =
   let open Hflmc2_syntax in

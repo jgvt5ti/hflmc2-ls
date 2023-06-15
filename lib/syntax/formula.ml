@@ -107,4 +107,5 @@ let simplify_pred p args =
   | Ge, [x; y] -> lift (>=) x y
   | Lt, [x; y] -> lift (<) x y
   | Gt, [x; y] -> lift (>) x y
+  | Eql, _ | Neql, _ -> None
   | _ -> failwith "simplify pred"
