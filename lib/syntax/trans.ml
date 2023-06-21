@@ -72,6 +72,10 @@ module Subst = struct
         | Int _ -> a'
         | Var x' -> if equal x x' then a else a'
         | Op(op, as') -> Op(op, List.map ~f:(arith_ equal x a) as')
+        | Size (ls) -> Size (arith_lsexpr_ equal x a ls)
+    and arith_lsexpr_ equal x a l = match l with
+        | Cons (hd, tl) -> Cons (arith_ equal x a hd, arith_lsexpr_ equal x a tl)
+        | _ -> l
     let arith : 'a. 'a S.Id.t -> S.Arith.t -> S.Arith.t -> S.Arith.t =
       fun x a a' -> arith_ S.Id.eq {x with ty=`Int} a a'
 
@@ -86,6 +90,11 @@ module Subst = struct
         | Nil -> a'
         | LVar x' -> if equal x x' then a else a'
         | Cons(hd, tl) -> Cons(hd, lsexpr_ equal x a tl)
+    and lsexpr_arith_ equal x a a' = match a' with
+        | Arith.Int _ -> a'
+        | Var _ -> a'
+        | Op(op, as') -> Op(op, List.map ~f:(lsexpr_arith_ equal x a) as')
+        | Size (ls) -> Size (lsexpr_ equal x a ls)
     let lsexpr : 'a. 'a S.Id.t -> S.Arith.lt -> S.Arith.lt -> S.Arith.lt =
       fun x a a' -> lsexpr_ S.Id.eq {x with ty=`List} a a'
 
