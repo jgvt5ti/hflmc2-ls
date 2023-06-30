@@ -475,7 +475,7 @@ let rename_simple_ty_rule
     { rule with var = { rule.var with ty = sty' } }
 
 let rec rename_abstraction_ty
-      : ?env:[`Int] Id.t IdMap.t
+      : ?env:[`Int | `List] Id.t IdMap.t
      -> simple_ty
      -> abstraction_ty
      -> abstraction_ty =
@@ -486,6 +486,10 @@ let rec rename_abstraction_ty
       TyArrow({ty=TyInt;_} as x', ret_aty) ->
         let env = IdMap.replace env x' {x with ty=`Int} in
         TyArrow({x with ty=TyInt}, rename_abstraction_ty ~env ret_sty ret_aty)
+    | TyArrow({ty=TyList;_} as x , ret_sty),
+      TyArrow({ty=TyList;_} as x', ret_aty) ->
+        let env = IdMap.replace env x' {x with ty=`List} in
+        TyArrow({x with ty=TyList}, rename_abstraction_ty ~env ret_sty ret_aty)
     | TyArrow({ty=TySigma arg_sty;_} as x , ret_sty),
       TyArrow({ty=TySigma arg_aty;_} as x', ret_aty) ->
         let ty = TySigma(rename_abstraction_ty ~env arg_sty arg_aty) in

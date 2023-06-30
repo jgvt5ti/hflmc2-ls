@@ -179,7 +179,19 @@ let subst_ariths id rint l = match rint with
   | RArith a ->
     List.map (Trans.Subst.Arith.arith id a) l
 
+let subst_ariths2 id rint l = match rint with 
+  | RId id' -> 
+    List.map (Trans.Subst.Arith.arith_lsexpr id (Arith.Var(id'))) l
+  | RArith a ->
+    List.map (Trans.Subst.Arith.arith_lsexpr id a) l
+
 let subst_lsexprs id rlist ls = match rlist with 
+  | RLId id' -> 
+    List.map (Trans.Subst.Arith.lsexpr_arith id (Arith.LVar(id'))) ls
+  | RLsExpr a ->
+    List.map (Trans.Subst.Arith.lsexpr_arith id a) ls
+
+let subst_lsexprs2 id rlist ls = match rlist with 
   | RLId id' -> 
     List.map (Trans.Subst.Arith.lsexpr id (Arith.LVar(id'))) ls
   | RLsExpr a ->
@@ -187,12 +199,12 @@ let subst_lsexprs id rlist ls = match rlist with
 
 let rec subst_refinement id (rprim:rprim) refinement = 
   match (rprim, refinement) with
-  | (RIntP(rint), RPred (p, a, l)) -> RPred(p, subst_ariths id rint a, l)
-  | (RListP(rlist), RPred (p, a, l)) -> RPred(p, a, subst_lsexprs id rlist l)
+  | (RIntP(rint), RPred (p, a, l)) -> RPred(p, subst_ariths id rint a, subst_ariths2 id rint l)
+  | (RListP(rlist), RPred (p, a, l)) -> RPred(p, subst_lsexprs id rlist a, subst_lsexprs2 id rlist l)
   | (_, RAnd(x, y)) -> conjoin (subst_refinement id rprim x) (subst_refinement id rprim y)
   | (_, ROr(x, y)) -> ROr(subst_refinement id rprim x, subst_refinement id rprim y)
-  | (RIntP(rint), RTemplate(id', l, ls)) -> RTemplate(id', subst_ariths id rint l, ls)
-  | (RListP(rlist), RTemplate(id', l, ls)) -> RTemplate(id', l, subst_lsexprs id rlist ls)
+  | (RIntP(rint), RTemplate(id', l, ls)) -> RTemplate(id', subst_ariths id rint l, subst_ariths2 id rint ls)
+  | (RListP(rlist), RTemplate(id', l, ls)) -> RTemplate(id', subst_lsexprs id rlist l, subst_lsexprs2 id rlist ls)
   | (_, x) -> x
 
 let rec subst id rprim = function

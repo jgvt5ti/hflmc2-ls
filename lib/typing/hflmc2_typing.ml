@@ -44,7 +44,18 @@ let rec subst_arith env fml =
     | None -> assert false
   end
   | Op (op, as') -> Op (op, List.map (subst_arith env) as')
-
+(*  | Size ls -> Size (subst_lsexpr env ls)
+and subst_lsexpr env fml =
+  let open Hflmc2_syntax in
+  match fml with
+  | Arith.Nil -> Arith.Nil
+  | LVar v -> begin
+    match IdMap.find env v with
+    | Some ({Id.name=_;ty=`List;id=_} as v') -> Arith.LVar v'
+    | _ -> assert false
+  end
+  | Cons (hd, tl) -> Cons (subst_arith env hd, subst_lsexpr env tl)
+*)
 let rec subst_fml env fml =
   let open Hflmc2_syntax in
   match fml with
