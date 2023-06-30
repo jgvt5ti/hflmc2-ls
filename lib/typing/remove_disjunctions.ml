@@ -52,6 +52,8 @@ let convert_formula env phi =
       )
     | App (p1, Arith e) ->
       App (go env p1, Arith e)
+    | App (p1, LsExpr e) ->
+      App (go env p1, LsExpr e)
     | App (p1, p2) ->
       App (go env p1, go env p2)
     | Abs _ -> begin

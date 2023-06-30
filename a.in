@@ -1,0 +1,26 @@
+%HES
+Sentry =v ∀ub. ub < 1 \/ Exists ub [].
+Exists ub ls =v
+  ((∀sssss. sssss < 1 * size ls + 0 \/ sssss < 0 \/ G sssss ls A) \/ Exists ub (0 :: ls)
+   \/ Exists ub (1 :: ls))
+  /\ size ls <= ub.
+A n =v false.
+G ttttt ls k =v
+  ∀ub. 
+   ub < 1 + 1 * ttttt \/ ub < 1 + (-1) * ttttt \/ ub < 1 + 1 * size [] \/ ub < 1 + 1 * size ls
+   \/ ub < 1 + 1 * 1
+   \/ ub < 1 + (-1) * 1
+   \/ G_e ub 0 [] ls k ttttt.
+G_e ub hd tl ls k ttttt =v
+  (ls =l [] /\ k 0
+   \/ ls =l hd :: tl
+      /\ (hd = 0 /\ (∀sssss. sssss < 1 * size tl + 0 \/ sssss < 0 \/ G sssss tl A)
+          \/ hd = 1 /\ (∀sssss. sssss < 1 * size tl + 0 \/ sssss < 0 \/ G sssss tl A))
+   \/ ls =l [] /\ k 0
+      \/ ls =l (-hd) :: tl
+         /\ (-hd = 0 /\ (∀sssss. sssss < 1 * size tl + 0 \/ sssss < 0 \/ G sssss tl A)
+             \/ -hd = 1 /\ (∀sssss. sssss < 1 * size tl + 0 \/ sssss < 0 \/ G sssss tl A))
+   \/ G_e ub (hd + 1) tl ls k ttttt
+   \/ G_e ub hd (0 :: tl) ls k ttttt
+   \/ G_e ub hd (1 :: tl) ls k ttttt)
+  /\ hd <= ub /\ size tl <= ub.
