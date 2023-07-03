@@ -57,19 +57,23 @@ let rec arith2smt2 =
     let args = ariths2smt2 l in
     let op_s = op2smt2 op in
     Printf.sprintf "(%s %s)" op_s args
-  | Size ls -> Printf.sprintf "(_size %s)" (lsexpr2smt2 ls)
+  | Size (Length, ls) -> Printf.sprintf "(_size %s)" (lsexpr2smt2 ls)
+  | Size (Head, ls) -> Printf.sprintf "(head %s)" (lsexpr2smt2 ls)
 and ariths2smt2 l =
     l |> List.map arith2smt2 |> List.fold_left (fun s x -> s ^ " " ^ x) "" 
 
 and lsexpr2smt2 = 
   let open Arith in
   function 
-  | Nil -> Printf.sprintf "nil"
   | LVar id -> Id.to_string id
-  | Cons(hd, tl) -> 
+  | Opl (Nil, _, _) -> Printf.sprintf "nil"
+  | Opl (Cons, [hd], [tl]) -> 
     let head = arith2smt2 hd in
     let tail = lsexpr2smt2 tl in
     Printf.sprintf "(insert %s %s)" head tail
+  | Opl (Tail, _, [ls]) ->
+    Printf.sprintf "(tail %s)" (lsexpr2smt2 ls)
+  | _ -> assert false
 and lsexprs2smt2 l =
     l |> List.map lsexpr2smt2 |> List.fold_left (fun s x -> s ^ " " ^ x) "" 
 let template2smt2 (p, l, ls) =

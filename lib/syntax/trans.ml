@@ -26,17 +26,16 @@ module Subst = struct
             | _ -> a
             end
         | Op(op, as') -> Op(op, List.map ~f:(arith env) as')
-        | Size ls -> Size (lsexpr env ls)
+        | Size (size, ls) -> Size (size, lsexpr env ls)
     and lsexpr : 'a S.Id.t env -> S.Arith.lt -> S.Arith.lt =
       fun env a ->
         match a with
-        | Nil -> a
         | LVar v ->
             begin match IdMap.find env v with
             | Some ({name=name;ty=`List;id=id} as v') -> LVar v'
             | _ -> a
             end
-        | Cons(hd, tl) -> Cons(hd ,lsexpr env tl)
+        | Opl(opl,as', ls') -> Opl(opl, List.map ~f:(arith env) as' ,List.map ~f:(lsexpr env) ls')
 
     let rec formula : 'a S.Id.t IdMap.t -> S.Formula.t -> S.Formula.t =
       fun env p ->
@@ -72,9 +71,10 @@ module Subst = struct
         | Int _ -> a'
         | Var x' -> if equal x x' then a else a'
         | Op(op, as') -> Op(op, List.map ~f:(arith_ equal x a) as')
-        | Size (ls) -> Size (arith_lsexpr_ equal x a ls)
+        | Size (size, ls) -> Size (size, arith_lsexpr_ equal x a ls)
     and arith_lsexpr_ equal x a l = match l with
-        | Cons (hd, tl) -> Cons (arith_ equal x a hd, arith_lsexpr_ equal x a tl)
+        | Opl (opl, as', ls') ->
+          Opl (opl,  List.map ~f:(arith_ equal x a) as', List.map ~f:(arith_lsexpr_ equal x a) ls')
         | _ -> l
     let arith : 'a. 'a S.Id.t -> S.Arith.t -> S.Arith.t -> S.Arith.t =
       fun x a a' -> arith_ S.Id.eq {x with ty=`Int} a a'
@@ -89,14 +89,14 @@ module Subst = struct
              -> ('avar, 'lvar) S.Arith.gen_lt =
       fun equal x a a' ->
         match a' with
-        | Nil -> a'
         | LVar x' -> if equal x x' then a else a'
-        | Cons(hd, tl) -> Cons(hd, lsexpr_ equal x a tl)
+        | Opl (opl, as', ls') -> 
+          Opl (opl, List.map ~f:(lsexpr_arith_ equal x a) as', List.map ~f:(lsexpr_ equal x a) ls')
     and lsexpr_arith_ equal x a a' = match a' with
         | Arith.Int _ -> a'
         | Var _ -> a'
         | Op(op, as') -> Op(op, List.map ~f:(lsexpr_arith_ equal x a) as')
-        | Size (ls) -> Size (lsexpr_ equal x a ls)
+        | Size (size, ls) -> Size (size, lsexpr_ equal x a ls)
     let lsexpr : 'a. 'a S.Id.t -> S.Arith.lt -> S.Arith.lt -> S.Arith.lt =
       fun x a a' -> lsexpr_ S.Id.eq {x with ty=`List} a a'
     let lsexpr_arith : 'a. 'a S.Id.t -> S.Arith.lt -> S.Arith.t -> S.Arith.t =
@@ -165,17 +165,16 @@ module Subst = struct
             | _ -> assert false
             end
         | Op(op, as') -> Op(op, List.map ~f:(arith env) as')
-        | Size ls -> Size (lsexpr env ls)
+        | Size (size, ls) -> Size (size, lsexpr env ls)
     and lsexpr : 'ty S.Hflz.t env -> S.Arith.lt -> S.Arith.lt =
       fun env a -> match a with
-        | Nil -> a
         | LVar x ->
             begin match IdMap.find env x with
             | None -> a
             | Some (LsExpr a') -> a'
             | _ -> assert false
             end
-        | Cons(hd, tl) -> Cons(arith env hd, lsexpr env tl)
+        | Opl(opl, as', ls') -> Opl(opl, List.map ~f:(arith env) as', List.map ~f:(lsexpr env) ls')
     let rec rename_bindings (phi : 'ty S.Hflz.t): 'ty S.Hflz.t =
       let rec go rename (phi : 'ty S.Hflz.t): 'ty S.Hflz.t = match phi with
         | Var x -> begin

@@ -21,7 +21,8 @@ open Raw_hflz
 %token PLUS  "+" MINUS "-" STAR  "*" SLASH "/" PERCENT "%" NEG
 %token EQ "=" NEQ "<>" LE "<=" GE ">=" /* LT "<" GT ">" */
 %token AND "&&" OR "||"
-%token NIL "[]" CONS "::" EQL "=l" NEQL "<>l" SIZE "size"
+%token NIL "[]" CONS "::" EQL "=l" NEQL "<>l"
+%token SIZE "size" HEAD "head" TAIL "tail"
 
 %token TBOOL TINT TARROW "->" SEMICOLON ";"
 
@@ -85,6 +86,8 @@ arith_expr:
 
 app_expr:
 | "size" atom { mk_size $2}
+| "head" atom { mk_head $2}
+| "tail" atom { mk_tail $2}
 | atom atom* { mk_apps $1 $2 }
 
 atom:

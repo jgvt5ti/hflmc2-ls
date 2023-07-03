@@ -256,12 +256,15 @@ let parse_model model =
     | s -> fail "parse_arith" s
   in
   let rec parse_list = function
-    | Atom "nil" -> Arith.Nil
+    | Atom "nil" -> Arith.Opl(Arith.Nil, [], [])
     | Atom v0 -> Arith.mk_lvar (mk_lvar v0)
     | List [Atom "insert"; hd; tl] ->
         let head = parse_arith hd in
         let tail = parse_list tl in
-        Arith.Cons (head, tail)
+        Arith.Opl(Arith.Cons, [head], [tail])
+    | List [Atom "tail"; ls] ->
+        let ls = parse_list ls in
+        Arith.Opl(Arith.Cons, [], [ls])
     | s -> fail "parse_list" s
   in
   let rec parse_formula = function
